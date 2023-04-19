@@ -2,6 +2,9 @@ import math
 import torch
 import torch.nn as nn
 import numpy as np
+import matplotlib.pyplot as plt
+import graphviz
+from graphviz import Source
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -13,14 +16,8 @@ torch.manual_seed(0)  #  for repeatable results
 k_size = 41
 
 # Input
-f = torch.tensor([2*x for x in range(21)], dtype=torch.float32)
+f = torch.tensor([2*x for x in range(5)], dtype=torch.float32)
 print(f'Input: {f}')
-
-# Output
-g = torch.tensor([4.0000,  6.0000,  8.0000, 10.0000, 12.0000, 14.0000, 16.0000, 18.0000,
-        20.0000, 22.0000, 24.0000, 26.0000, 28.0000, 30.0000, 32.0000, 34.0000,
-        36.0000, 37.7500, 39.0000, 39.7500, 40.0000])
-print(f'Wanted output: {g}')
 
 # Define simple 1D dilation Neural Net
 class Dilation1D(nn.Module):
@@ -62,6 +59,9 @@ class Dilation1D(nn.Module):
 
         return out
 
+# Output
+g = Dilation1D(1)(f).clone().detach()
+print(f'Wanted output: {g}')
 
 # Use simple MSE error
 def error(y, y_pred):
@@ -88,3 +88,34 @@ for i in range(100):
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
+
+
+# Constructing backpropagation graph
+G = graphviz.Digraph(comment="Backpropagation Graph")
+
+index = 0
+
+def createNode(fun):
+    global index
+    index += 1
+
+    if not fun:
+        G.node(str(index), "None" + "_" + str(index))
+        return index
+
+    string = str(fun).split(" ")[0][1:] + "_" + str(index)
+    G.node(str(index), string)
+
+    print(string)
+    print(fun.next_functions)
+
+    for child_fun in fun.next_functions:
+        G.edge(str(index), str(createNode(child_fun[0])))
+    
+    return index
+
+
+createNode(loss.grad_fn)
+
+s = Source(G.source, filename="gradient.gv", format="png")
+s.view()
