@@ -22,60 +22,69 @@ g = torch.tensor([4.0000,  6.0000,  8.0000, 10.0000, 12.0000, 14.0000, 16.0000, 
         36.0000, 37.7500, 39.0000, 39.7500, 40.0000])
 print(f'Wanted output: {g}')
 
-# scale
-s = torch.tensor(0.95, dtype=torch.float32, requires_grad=True)
+# Define simple 1D dilation Neural Net
+class Dilation1D(nn.Module):
+    def __init__(self, s):
+        super(Dilation1D, self).__init__()
+        # scale
+        scale = torch.tensor(s, dtype=torch.float32, requires_grad=True)
+        self.scale = torch.nn.parameter.Parameter(scale, requires_grad=True)
 
-# print(f'Structuring function: {h}')
+    def forward(self, input=None):
+        if input is None:
+            raise ValueError("Input tensor must be provided")
+        
+        # h(z) = -(||z||**2) / 4s
+        z_i = torch.linspace(-k_size // 2 + 1, k_size // 2, k_size, dtype=torch.float32)
+        z = z_i ** 2
+        h = -z / (4*self.scale)
 
-# implement 1D parabolic dilation
-def parabolic_dilate_1D(input):
-    # h(z) = -(||z||**2) / 4s
-    z_i = torch.linspace(-k_size // 2 + 1, k_size // 2, k_size, dtype=torch.float32)
-    z = z_i ** 2
-    h = -z / (4*s)
+        out = torch.zeros_like(input)
+        
+        # Calculate (f dilate h)(x) = max{f(x-y) + h(y) for all y in h}
+        for x in range(input.shape[0]):
+            # print(f'Calculating for {x}:')
+            max = 0
 
-    out = torch.zeros_like(input)
-    
-    # Calculate (f dilate h)(x) = max{f(x-y) + h(y) for all y in h}
-    for x in range(len(input)):
-        # print(f'Calculating for {x}:')
-        max = 0
+            # Loop over h
+            for i in range(k_size):
+                y = i - k_size // 2
+                
+                # Check bounds
+                if (x - y >= 0 and x - y <= input.shape[0] - 1):
+                    tmp = input[x-y] + h[i]
+                    # print(x, y, i)
+                    # print(tmp)
+                    if (tmp > max):
+                        max = tmp
+            # print(f'Final max: {max}')
+            out[x] = max
 
-        # Loop over h
-        for i in range(k_size):
-            y = i - k_size // 2
-            
-            # Check bounds
-            if (x - y >= 0 and x - y <= len(input) - 1):
-                tmp = input[x-y] + h[i]
-                # print(x, y, i)
-                # print(tmp)
-                if (tmp > max):
-                    max = tmp
-        # print(f'Final max: {max}')
-        out[x] = max
+        return out
 
-    return out
 
 # Use simple MSE error
 def error(y, y_pred):
     return torch.mean(((y_pred - y)**2))
 
+model = Dilation1D(0.95)
+
+optimizer = torch.optim.Adam(model.parameters(), lr=0.05)
+
+writer.add_graph(model, input_to_model=f)
+writer.close()
+
 print("Training:")
-print(f'Initial output: {parabolic_dilate_1D(f)}')
+print(f'Initial output: {model(f)}')
 for i in range(100):
-    pred = parabolic_dilate_1D(f)
+    pred = model(f)
     loss = error(g, pred)
     if ((i + 1) % 10 == 0):
         print(f'Iteration {i + 1}:')
         print(f'Loss = {loss}')
         print(f'Output: {pred}')
-        print(f'Scale = {s}')
         print()
 
+    optimizer.zero_grad()
     loss.backward()
-    with torch.no_grad():
-        s -= s.grad * 0.005
-        s.grad.zero_()
-
-# How does it learn?
+    optimizer.step()
