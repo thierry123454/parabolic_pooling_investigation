@@ -8,7 +8,7 @@ from graphviz import Source
 
 from torch.utils.tensorboard import SummaryWriter
 
-writer = SummaryWriter("runs/1d_dilation_no_cond")
+writer = SummaryWriter("runs/1d_dilation")
 
 torch.manual_seed(0)  #  for repeatable results
 
@@ -36,22 +36,26 @@ class Dilation1D(nn.Module):
         z = z_i ** 2
         h = -z / (4*self.scale)
 
-        # print((h == 0).nonzero(as_tuple=True)[0])
-
         out = torch.zeros_like(input)
-        missing = h.shape[0] - input.shape[0]
         
         # Calculate (f dilate h)(x) = max{f(x-y) + h(y) for all y in h}
         for x in range(input.shape[0]):
             # print(f'Calculating for {x}:')
-            # print(h)
-            padded = nn.functional.pad(input, (missing // 2 + 2, missing // 2 - 2), "constant", -float('inf'))
-            shifted = torch.roll(padded, -x)
-            # print((shifted == 0).nonzero(as_tuple=True)[0])
-            # print(shifted)
-            tmp = torch.add(shifted, h)
-            # print(tmp)
-            out[x] = torch.max(tmp)
+            max = 0
+
+            # Loop over h
+            for i in range(k_size):
+                y = i - k_size // 2
+                
+                # Check bounds
+                if (x - y >= 0 and x - y <= input.shape[0] - 1):
+                    tmp = input[x-y] + h[i]
+                    # print(x, y, i)
+                    # print(tmp)
+                    if (tmp > max):
+                        max = tmp
+            # print(f'Final max: {max}')
+            out[x] = max
 
         return out
 
@@ -84,7 +88,6 @@ for i in range(100):
     loss.backward()
 
     if ((i + 1) % 10 == 0):
-        print(f'Scale: {model.scale}')
         print(f'Gradient of scale: {model.scale.grad}')
         print()
 
@@ -119,5 +122,5 @@ def createDAG(fun):
 
 createDAG(loss.grad_fn)
 
-s = Source(G.source, filename="gradient_cond_no_cond", format="png")
+s = Source(G.source, filename="gradient_cond", format="png")
 s.view()
