@@ -1,12 +1,16 @@
 // Backpropagation Graph
 digraph {
-	0 [label=SubBackward0_0]
-	1 [label=MulBackward0_1]
-	2 [label=AccumulateGrad_2]
+	0 [label=MaxBackward1_0]
+	1 [label=CatBackward0_1]
+	2 [label=PowBackward0_2]
+	3 [label=AccumulateGrad_3]
+	2 -> 3
 	1 -> 2
-	3 [label=None_3]
-	1 -> 3
+	4 [label=MulBackward0_4]
+	5 [label=AccumulateGrad_5]
+	4 -> 5
+	6 [label=None_6]
+	4 -> 6
+	1 -> 4
 	0 -> 1
-	4 [label=None_4]
-	0 -> 4
 }

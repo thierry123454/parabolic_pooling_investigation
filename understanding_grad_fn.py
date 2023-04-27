@@ -23,32 +23,31 @@ back_x(dx[0])
 print(x.grad)
 
 
+G = graphviz.Digraph(comment="Backpropagation Graph")
 
-# G = graphviz.Digraph(comment="Backpropagation Graph")
+used_ids = {-1}
 
-# used_ids = {-1}
+def createDAG(fun):
+    global used_ids
+    id = max(used_ids) + 1
+    used_ids.add(id)
 
-# def createDAG(fun):
-#     global used_ids
-#     id = max(used_ids) + 1
-#     used_ids.add(id)
+    if not fun:
+        G.node(str(id), "None" + "_" + str(id))
+        return id
 
-#     if not fun:
-#         G.node(str(id), "None" + "_" + str(id))
-#         return id
+    string = str(fun).split(" ")[0][1:] + "_" + str(id)
+    G.node(str(id), string)
 
-#     string = str(fun).split(" ")[0][1:] + "_" + str(id)
-#     G.node(str(id), string)
+    print(fun.next_functions)
 
-#     print(fun.next_functions)
-
-#     for child_fun in fun.next_functions:
-#         G.edge(str(id), str(createDAG(child_fun[0])))
+    for child_fun in fun.next_functions:
+        G.edge(str(id), str(createDAG(child_fun[0])))
     
-#     return id
+    return id
 
 
-# createDAG(l.grad_fn)
+createDAG(l.grad_fn)
 
-# s = Source(G.source, filename="simple", format="png")
-# s.view()
+s = Source(G.source, filename="simple", format="png")
+s.view()

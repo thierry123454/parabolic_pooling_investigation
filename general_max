@@ -1,0 +1,26 @@
+// Backpropagation Graph
+digraph {
+	0 [label=MaxBackward1_0]
+	1 [label=CatBackward0_1]
+	2 [label=PowBackward0_2]
+	3 [label=AccumulateGrad_3]
+	2 -> 3
+	1 -> 2
+	4 [label=PowBackward0_4]
+	5 [label=AccumulateGrad_5]
+	4 -> 5
+	1 -> 4
+	6 [label=PowBackward0_6]
+	7 [label=AccumulateGrad_7]
+	6 -> 7
+	1 -> 6
+	8 [label=PowBackward0_8]
+	9 [label=AccumulateGrad_9]
+	8 -> 9
+	1 -> 8
+	10 [label=PowBackward0_10]
+	11 [label=AccumulateGrad_11]
+	10 -> 11
+	1 -> 10
+	0 -> 1
+}

@@ -60,7 +60,7 @@ class Dilation1D(nn.Module):
         return out
 
 # Output
-g = Dilation1D(1)(f).clone().detach()
+g = torch.tensor([4.0000, 5.7500, 7.0000, 7.7500, 8.0000], dtype=torch.float32) #Dilation1D(1)(f).clone().detach()
 print(f'Wanted output: {g}')
 
 # Use simple MSE error
@@ -88,6 +88,7 @@ for i in range(100):
     loss.backward()
 
     if ((i + 1) % 10 == 0):
+        print(f'Gradient of scale: {model.scale}')
         print(f'Gradient of scale: {model.scale.grad}')
         print()
 
@@ -95,32 +96,32 @@ for i in range(100):
 
 
 # Constructing backpropagation graph
-G = graphviz.Digraph(comment="Backpropagation Graph")
+# G = graphviz.Digraph(comment="Backpropagation Graph")
 
-used_ids = {-1}
+# used_ids = {-1}
 
-def createDAG(fun):
-    global used_ids
-    id = max(used_ids) + 1
-    used_ids.add(id)
+# def createDAG(fun):
+#     global used_ids
+#     id = max(used_ids) + 1
+#     used_ids.add(id)
 
-    if not fun:
-        G.node(str(id), "None" + "_" + str(id))
-        return id
+#     if not fun:
+#         G.node(str(id), "None" + "_" + str(id))
+#         return id
 
-    string = str(fun).split(" ")[0][1:] + "_" + str(id)
-    G.node(str(id), string)
+#     string = str(fun).split(" ")[0][1:] + "_" + str(id)
+#     G.node(str(id), string)
 
-    # print(string)
-    # print(fun.next_functions)
+#     # print(string)
+#     # print(fun.next_functions)
 
-    for child_fun in fun.next_functions:
-        G.edge(str(id), str(createDAG(child_fun[0])))
+#     for child_fun in fun.next_functions:
+#         G.edge(str(id), str(createDAG(child_fun[0])))
     
-    return id
+#     return id
 
 
-createDAG(loss.grad_fn)
+# createDAG(loss.grad_fn)
 
-s = Source(G.source, filename="gradient_cond", format="png")
-s.view()
+# s = Source(G.source, filename="gradient_cond", format="png")
+# s.view()
