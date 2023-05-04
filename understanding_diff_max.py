@@ -160,7 +160,7 @@ createDAG(z.grad_fn)
 s = Source(G.source, filename="simple_max", format="png")
 
 # General case
-inp_gen = torch.tensor([1., 2.], requires_grad=True)
+inp_gen = torch.tensor([1.], requires_grad=True)
 x_1 = inp_gen**1
 x_2 = inp_gen**2
 x_3 = inp_gen**3

@@ -8,7 +8,7 @@ from graphviz import Source
 
 from torch.utils.tensorboard import SummaryWriter
 
-writer = SummaryWriter("runs/1d_dilation_no_cond")
+writer = SummaryWriter("runs/1d_dilation_no_for")
 
 torch.manual_seed(0)  #  for repeatable results
 
@@ -41,18 +41,27 @@ class Dilation1D(nn.Module):
         out = torch.zeros_like(input)
         missing = h.shape[0] - input.shape[0]
         padded = nn.functional.pad(input, (missing // 2 + 2, missing // 2 - 2), "constant", -float('inf'))
-        
-        # Calculate (f dilate h)(x) = max{f(x-y) + h(y) for all y in h}
-        for x in range(input.shape[0]):
-            # print(f'Calculating for {x}:')
-            # print(h)
-            shifted = torch.roll(padded, -x)
-            # print((shifted == 0).nonzero(as_tuple=True)[0])
-            # print(shifted)
-            tmp = torch.add(shifted, h)
-            # print(tmp)
-            out[x] = torch.max(tmp)
 
+        repeated_tensors = [padded] * input.shape[0]
+        input_repeat = torch.stack(repeated_tensors)
+
+        # Shifts for each row
+        shifts = -torch.arange(input.shape[0])
+
+        # Create indices for rolling
+        n_rows, n_cols = input_repeat.shape
+        col_indices = (torch.arange(n_cols) - shifts.view(-1, 1)) % n_cols
+
+        # Roll each row with a different shift using advanced indexing
+        shifted_input = input_repeat[torch.arange(n_rows).view(-1, 1), col_indices]
+        
+        repeated_h = [h] * input.shape[0]
+        h_matrix = torch.stack(repeated_h)
+
+        add_inp_h = shifted_input + h_matrix
+
+        out, _ = torch.max(add_inp_h, dim=1)
+        
         return out
 
 # Output
@@ -119,5 +128,5 @@ def createDAG(fun):
 
 createDAG(loss.grad_fn)
 
-s = Source(G.source, filename="gradient_cond_no_cond", format="png")
-s.view()
+# s = Source(G.source, filename="gradient_cond_no_for", format="png")
+# s.view()
