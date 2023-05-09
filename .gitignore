@@ -1,3 +1,10 @@
+# DS_Store
+".DS_Store"
+"._.DS_Store"
+"**/.DS_Store"
+"**/._.DS_Store"
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -8,6 +15,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+runs/
 build/
 develop-eggs/
 dist/
