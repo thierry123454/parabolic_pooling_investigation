@@ -69,7 +69,7 @@ def error(y, y_pred):
 
 model = Dilation1D(0.95)
 
-optimizer = torch.optim.Adam(model.parameters(), lr=0.05)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.05)
 
 writer.add_graph(model, input_to_model=f)
 writer.close()
