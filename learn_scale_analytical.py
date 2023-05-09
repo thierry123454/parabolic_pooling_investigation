@@ -67,7 +67,6 @@ for i in range(10):
         grad_h_to_scale = (z / (4*(s**2)))
 
         print(grad_h_to_scale)
-        print(h.grad)
         
         precise_grad_h = h.grad.to(torch.float64)
         
