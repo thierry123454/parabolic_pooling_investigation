@@ -19,6 +19,8 @@ k_size = 41
 f = torch.tensor([2*x for x in range(5)], dtype=torch.float32)
 print(f'Input: {f}')
 
+# sin(2t) + cos(4t)
+
 # Define simple 1D dilation Neural Net
 class Dilation1D(nn.Module):
     def __init__(self, s):
