@@ -24,6 +24,7 @@ print("Training:")
 for i in range(10):
     # h(z) = -(||z||**2) / 4s
     z_i = torch.linspace(-k_size // 2 + 1, k_size // 2, k_size, dtype=torch.float32)
+    print(z_i)
     z = z_i ** 2
     h = -z / (4*s)
     h.retain_grad()
