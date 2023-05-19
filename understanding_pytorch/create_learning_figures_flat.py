@@ -27,26 +27,27 @@ k_size = 201
 domain_x = np.linspace(-100, 100, 201)
 f = torch.tensor([math.sin(0.1*x) + math.cos(0.05*x) for x in domain_x], dtype=torch.float32)
 
-class Dilation1D(nn.Module):
-    def __init__(self, s):
-        super(Dilation1D, self).__init__()
+class FlatDilation1D(nn.Module):
+    def __init__(self, s, alpha):
+        super(FlatDilation1D, self).__init__()
         # scale
-        scale = torch.tensor(s, dtype=torch.float32)
+        scale = torch.tensor(s, dtype=torch.float32, requires_grad=True)
         self.scale = torch.nn.parameter.Parameter(scale, requires_grad=True)
+        self.alpha = alpha
+        self.z_i = torch.linspace(-k_size // 2 + 1, k_size // 2, k_size, dtype=torch.float32)
 
     def forward(self, input=None):
         if input is None:
             raise ValueError("Input tensor must be provided")
         
-        # h(z) = -(||z||**2) / 4s
-        z_i =  torch.linspace(-k_size // 2 + 1, k_size // 2, k_size, dtype=torch.float32)
-        self.z = z_i ** 2
-        self.h = -self.z / (4*self.scale)
+        # h(z) = -(z/s)**alpha
+        self.h = -(self.z_i / self.scale)**self.alpha
 
-        self.h.retain_grad()
+        # print(h)
 
         out = torch.zeros_like(input)
-        self.man_grad_tensor = torch.zeros_like(input)
+        missing = self.h.shape[0] - input.shape[0]
+        padded = nn.functional.pad(input, (missing // 2 + 2, missing // 2 - 2), "constant", -float('inf'))
         
         # Calculate (f dilate h)(x) = max{f(x-y) + h(y) for all y in h}
         offset = input.shape[0] // 2
@@ -55,20 +56,20 @@ class Dilation1D(nn.Module):
             shifted = roll_with_padding(input, -x)
             tmp = torch.add(shifted, self.h)
             max_value = torch.max(tmp)
-
-            # Manually calculate gradient of d (f \oplus q^s) / d s using eq 3.10
-            with torch.no_grad():
-                max_occurences = torch.eq(tmp, max_value)
-                max_pos = torch.nonzero(max_occurences).squeeze() - offset
-                if (max_pos.numel() != 1): print(f"Meerdere PoC {max_pos.numel()}")
-                man_grad = 1 / max_pos.numel() * torch.sum(max_pos**2 / (4*self.scale**2))
-                self.man_grad_tensor[x + offset] = man_grad
+            
+            # with torch.no_grad():
+            #     max_occurences = torch.eq(tmp, max_value)
+            #     max_pos = torch.nonzero(max_occurences).squeeze() - offset
+            #     if (max_pos.numel() != 1): print(f"Meerdere PoC {max_pos.numel()}")
 
             out[x + offset] = max_value
 
         return out
 
-g = Dilation1D(50)(f).clone().detach()
+alpha = 2**4
+
+t = 50
+g = FlatDilation1D(t, alpha)(f).clone().detach()
 
 # Use simple MSE error
 def error(y, y_pred):
@@ -81,10 +82,11 @@ gradients = []
 
 def train_and_plot(s):
     print(f"Training s = {s}:")
-    model = Dilation1D(s)
+    model = FlatDilation1D(s, alpha)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.5)
 
     predictions = []
+    struct_funs = []
 
     startTime = time.time()
     for i in range(n_iterations):
@@ -95,6 +97,7 @@ def train_and_plot(s):
             print(f'Iteration {i + 1}:')
             print(f'Loss = {loss}')
             predictions.append((pred.detach(), str(i + 1)))
+            struct_funs.append(model.h.detach().numpy())
 
         optimizer.zero_grad()
         loss.backward()
@@ -104,11 +107,6 @@ def train_and_plot(s):
             print(f'Gradient of scale: {model.scale.grad}')
             print()
         
-        with torch.no_grad():
-            grad_h_to_scale = (model.z / (4*(model.scale**2)))
-            gradient_tuple = (model.scale.grad, torch.dot(model.h.grad, grad_h_to_scale), torch.dot(pred.grad, model.man_grad_tensor))
-            gradients.append(gradient_tuple)
-
         optimizer.step()
 
     endTime = time.time()
@@ -125,40 +123,14 @@ def train_and_plot(s):
     plt.plot(domain_x, f, label= '$f$')
     plt.plot(domain_x, g, label= '$f \oplus q^t$')
 
-    for prediction in predictions:
-        plt.plot(domain_x, prediction[0], label= '$f \oplus q^s$ on i = ' + prediction[1])
-
+    for i in range(len(predictions)):
+        plt.plot(domain_x, predictions[i][0], label='$f \oplus b^s$ on i = ' + predictions[i][1])
+        plt.plot(model.z_i.detach().numpy(), struct_funs[i], label='$b^s$ on $i = $' + predictions[i][1])
+    ax = plt.gca()
+    ax.set_ylim([-4, 2])
     plt.legend()
-    plt.title(f'Learning the scale with $t = 50$ and the starting scale being {s}.', fontdict={'fontsize': 15})
-    plt.savefig(f"learning_scale_from_{s}.pdf", format="pdf", bbox_inches="tight")
+    plt.title(f'Learning the scale with $t = {t}$ and the starting scale being {s}.', fontdict={'fontsize': 15})
     plt.show()
 
 train_and_plot(2)
 train_and_plot(150)
-
-
-# Comparing analytical gradient and PyTorch gradient
-
-# First using equation 3.9
-diff = []
-percentage_diff = []
-for gradient in gradients:
-    difference = abs(gradient[0] - gradient[1])
-    diff.append(difference)
-    if (gradient[0] != 0):
-        percentage_diff.append(100 * difference / abs(gradient[0]))
-
-print(f'Average difference eq 3.9: {sum(diff) / len(diff)}') # 6.960307330494686e-11
-print(f'Average percentage difference eq 3.9: {sum(percentage_diff) / len(percentage_diff)}') # 4.930320301355096e-06 %
-
-# Then using equation 3.10
-diff = []
-percentage_diff = []
-for gradient in gradients:
-    difference = abs(gradient[0] - gradient[2])
-    diff.append(difference)
-    if (gradient[0] != 0):
-        percentage_diff.append(100 * difference / abs(gradient[0]))
-
-print(f'Average difference eq 3.10: {sum(diff) / len(diff)}') # 9.038868264976685e-11
-print(f'Average percentage difference eq 3.10: {sum(percentage_diff) / len(percentage_diff)}') # 6.047777787898667e-06 %
