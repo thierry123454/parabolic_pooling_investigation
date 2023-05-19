@@ -55,10 +55,11 @@ class Dilation1D(nn.Module):
             tmp = torch.add(shifted, self.h)
             max_value = torch.max(tmp)
 
-            # Manually calculate gradient using eq 3.10
+            # Manually calculate gradient of d (f \oplus q^s) / d s using eq 3.10
             with torch.no_grad():
                 max_occurences = torch.eq(tmp, max_value)
                 max_pos = torch.nonzero(max_occurences).squeeze() - offset
+                if (max_pos.numel() != 1): print(f"Meerdere PoC {max_pos.numel()}")
                 man_grad = 1 / max_pos.numel() * torch.sum(max_pos**2 / (4*self.scale**2))
                 self.man_grad_tensor[x + offset] = man_grad
 
