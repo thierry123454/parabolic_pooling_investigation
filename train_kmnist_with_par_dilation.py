@@ -16,13 +16,15 @@ from torchvision.transforms import ToTensor
 from torchvision.datasets import KMNIST
 from torch.optim import Adam
 from torch import nn
-from morphology_package.src.morphological_torch.pooling_operations import ParabolicPool2D
+from morphology_package.src.morphological_torch.pooling_operations import ParabolicPool2D_V2
 
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
 import torch
 import time
+
+torch.manual_seed(0)
 
 class LeNet(Module):
 	def __init__(self, numChannels, classes):
@@ -32,12 +34,12 @@ class LeNet(Module):
 		self.conv1 = Conv2d(in_channels=numChannels, out_channels=20,
 			kernel_size=(5, 5))
 		self.relu1 = ReLU()
-		self.pool1 = ParabolicPool2D(20)
+		self.pool1 = ParabolicPool2D_V2(20)
 		# initialize second set of CONV => RELU => POOL layers
 		self.conv2 = Conv2d(in_channels=20, out_channels=50,
 			kernel_size=(5, 5))
 		self.relu2 = ReLU()
-		self.pool2 = ParabolicPool2D(50)
+		self.pool2 = ParabolicPool2D_V2(50)
 		# initialize first (and only) set of FC => RELU layers
 		self.fc1 = Linear(in_features=800, out_features=500)
 		self.relu3 = ReLU()
@@ -71,7 +73,7 @@ class LeNet(Module):
 # define training hyperparameters
 INIT_LR = 1e-3
 BATCH_SIZE = 32
-EPOCHS = 5
+EPOCHS = 1
 # define the train and val splits
 TRAIN_SPLIT = 0.75
 VAL_SPLIT = 1 - TRAIN_SPLIT
@@ -149,6 +151,7 @@ for e in range(0, EPOCHS):
 		totalTrainLoss += loss
 		trainCorrect += (pred.argmax(1) == y).type(
 			torch.float).sum().item()
+		break
 
 # # finish measuring how long training took
 endTime = time.time()
