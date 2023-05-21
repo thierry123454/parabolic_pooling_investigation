@@ -128,5 +128,5 @@ for ks in kernel_sizes:
 
 print(data)
 
-with open("kernel_size_experiment.json", "w") as outfile:
+with open("experiments/kernel_size_experiment.json", "w") as outfile:
     json.dump(data, outfile)
