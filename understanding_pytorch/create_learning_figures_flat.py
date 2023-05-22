@@ -43,7 +43,10 @@ class FlatDilation1D(nn.Module):
         # h(z) = -(z/s)**alpha
         self.h = -(self.z_i / self.scale)**self.alpha
 
-        # print(h)
+        # self.h = torch.where(torch.abs(self.z_i) < self.scale, 0, -float('inf'))
+        # print(self.z_i)
+        # print(self.scale)
+        # print(self.h)
 
         out = torch.zeros_like(input)
         missing = self.h.shape[0] - input.shape[0]
@@ -57,10 +60,10 @@ class FlatDilation1D(nn.Module):
             tmp = torch.add(shifted, self.h)
             max_value = torch.max(tmp)
             
-            # with torch.no_grad():
-            #     max_occurences = torch.eq(tmp, max_value)
-            #     max_pos = torch.nonzero(max_occurences).squeeze() - offset
-            #     if (max_pos.numel() != 1): print(f"Meerdere PoC {max_pos.numel()}")
+            with torch.no_grad():
+                max_occurences = torch.eq(tmp, max_value)
+                max_pos = torch.nonzero(max_occurences).squeeze() - offset
+                if (max_pos.numel() != 1): print(f"Meerdere PoC {max_pos.numel()}")
 
             out[x + offset] = max_value
 
@@ -125,11 +128,12 @@ def train_and_plot(s):
 
     for i in range(len(predictions)):
         plt.plot(domain_x, predictions[i][0], label='$f \oplus b^s$ on i = ' + predictions[i][1])
-        plt.plot(model.z_i.detach().numpy(), struct_funs[i], label='$b^s$ on $i = $' + predictions[i][1])
+        # plt.plot(model.z_i.detach().numpy(), struct_funs[i], label='$b^s$ on $i = $' + predictions[i][1])
     ax = plt.gca()
     ax.set_ylim([-4, 2])
     plt.legend()
     plt.title(f'Learning the scale with $t = {t}$ and the starting scale being {s}.', fontdict={'fontsize': 15})
+    plt.savefig(f"learning_scale_from_{s}_flat.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
 train_and_plot(2)
