@@ -10,7 +10,7 @@ import torch
 torch.manual_seed(0)
 
 class LeNet(Module):
-	def __init__(self, numChannels, classes, ks):
+	def __init__(self, numChannels, classes, ks=3, fc_in_features=800):
 		# call the parent constructor
 		super(LeNet, self).__init__()
 		# initialize first set of CONV => RELU => POOL layers
@@ -24,7 +24,7 @@ class LeNet(Module):
 		self.relu2 = ReLU()
 		self.pool2 = ParabolicPool2D_V2(50, ks)
 		# initialize first (and only) set of FC => RELU layers
-		self.fc1 = Linear(in_features=800, out_features=500)
+		self.fc1 = Linear(in_features=fc_in_features, out_features=500)
 		self.relu3 = ReLU()
 		# initialize our softmax classifier
 		self.fc2 = Linear(in_features=500, out_features=classes)

@@ -29,13 +29,12 @@ RUNS = 3
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # load the KMNIST dataset
-print("[INFO] loading the KMNIST dataset...")
 trainData = KMNIST(root="data/kmnist", train=True, download=True,
 	transform=ToTensor())
 testData = KMNIST(root="data/kmnist", train=False, download=True,
 	transform=ToTensor())
+
 # calculate the train/validation split
-print("[INFO] generating the train/validation split...")
 numTrainSamples = int(len(trainData))
 
 (trainData, _) = random_split(trainData, [numTrainSamples, 0], generator=torch.Generator().manual_seed(42))
@@ -50,7 +49,11 @@ trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
 # Dictionary that contains all data
 data = {}
 
+first = True
+
 def train_and_store(kernel_size):
+	global first
+
 	print(f"Starting experiment for kernel size: {kernel_size}")
 
 	accuracy = []
@@ -58,6 +61,26 @@ def train_and_store(kernel_size):
 	avg_precision = []
 	avg_recall = []
 	times = []
+
+	# Train model for one epoch to get training data in cache. This leads to
+	# to the very first iteration not having a extraordinarily high time to
+	# train.
+	if first:
+		model = LeNet(
+			numChannels=1,
+			classes=len(trainData.dataset.classes),
+			ks=kernel_size).to(device)
+		opt = Adam(model.parameters(), lr=INIT_LR)
+		lossFn = nn.NLLLoss()
+		model.train()
+		for (x, y) in trainDataLoader:
+			(x, y) = (x.to(device), y.to(device))
+			pred = model(x)
+			loss = lossFn(pred, y)
+			opt.zero_grad()
+			loss.backward()
+			opt.step()
+		first = False
 
 	for r in range(RUNS):
 		print(f"Run: {r}")
@@ -75,8 +98,6 @@ def train_and_store(kernel_size):
 		startTime = time.time()
 		for _ in range(EPOCHS):
 			model.train()
-			totalTrainLoss = 0
-			trainCorrect = 0
 
 			for (x, y) in trainDataLoader:
 				(x, y) = (x.to(device), y.to(device))
@@ -85,9 +106,6 @@ def train_and_store(kernel_size):
 				opt.zero_grad()
 				loss.backward()
 				opt.step()
-				totalTrainLoss += loss
-				trainCorrect += (pred.argmax(1) == y).type(
-					torch.float).sum().item()
 		totalTime = time.time() - startTime
 
 		with torch.no_grad():
@@ -128,5 +146,5 @@ for ks in kernel_sizes:
 
 print(data)
 
-with open("experiments/kernel_size_experiment.json", "w") as outfile:
+with open("experiments/kernel_size_experiment_standard.json", "w") as outfile:
     json.dump(data, outfile)

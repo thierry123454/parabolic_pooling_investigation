@@ -30,14 +30,12 @@ VAL_SPLIT = 1 - TRAIN_SPLIT
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # load the KMNIST dataset
-print("[INFO] loading the KMNIST dataset...")
 trainData = KMNIST(root="data/kmnist", train=True, download=True,
 	transform=ToTensor())
 testData = KMNIST(root="data/kmnist", train=False, download=True,
 	transform=ToTensor())
 
 # calculate the train/validation split
-print("[INFO] generating the train/validation split...")
 numTrainSamples = int(len(trainData) * TRAIN_SPLIT)
 numValSamples = int(len(trainData) * VAL_SPLIT)
 (trainData, valData) = random_split(trainData,
@@ -54,7 +52,6 @@ trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
 valSteps = len(valDataLoader.dataset) // BATCH_SIZE
 
 # initialize the LeNet model
-print("[INFO] initializing the LeNet model...")
 model = LeNet(
 	numChannels=1,
 	classes=len(trainData.dataset.classes)).to(device)
@@ -68,8 +65,7 @@ H = {
 	"val_loss": [],
 	"val_acc": []
 }
-# measure how long training is going to take
-print("[INFO] training the network...")
+# measure how long training is going to takez
 startTime = time.time()
 
 # loop over our epochs
