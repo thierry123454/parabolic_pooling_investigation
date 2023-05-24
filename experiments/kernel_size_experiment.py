@@ -61,6 +61,8 @@ def train_and_store(kernel_size):
 	avg_precision = []
 	avg_recall = []
 	times = []
+	scales_p1 = []
+	scales_p2 = []
 
 	# Train model for one epoch to get training data in cache. This leads to
 	# to the very first iteration not having a extraordinarily high time to
@@ -128,13 +130,18 @@ def train_and_store(kernel_size):
 		avg_precision.append(class_report["macro avg"]["precision"])
 		avg_recall.append(class_report["macro avg"]["recall"])
 		times.append(totalTime)
+		scales_p1.append(model.pool1.t.tolist())
+		scales_p2.append(model.pool2.t.tolist())
+		print(scales_p1)
 	
 	data[kernel_size] = {
 		"accuracy": accuracy,
 		"avg_f1": avg_f1,
 		"avg_precision": avg_precision,
 		"avg_recall": avg_recall,
-		"time": times
+		"time": times,
+		"scales_p1": scales_p1,
+		"scales_p2": scales_p2
 	}
 
 	print(data[kernel_size])
@@ -146,5 +153,5 @@ for ks in kernel_sizes:
 
 print(data)
 
-with open("experiments/kernel_size_experiment_standard.json", "w") as outfile:
+with open("experiments/kernel_size_experiment_normalized.json", "w") as outfile:
     json.dump(data, outfile)
