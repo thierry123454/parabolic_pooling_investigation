@@ -1,5 +1,3 @@
-import matplotlib
-matplotlib.use("Agg")
 # import the necessary packages
 from sklearn.metrics import classification_report
 from torch.utils.data import random_split
@@ -11,6 +9,7 @@ from torch import nn
 import torch
 import torch.nn.functional as F
 import json
+import numpy as np
 
 torch.manual_seed(0)
 
@@ -20,7 +19,7 @@ from models.parabolic_lenet import LeNet
 INIT_LR = 1e-3
 BATCH_SIZE = 32
 EPOCHS = 5
-RUNS = 3
+RUNS = 4
 
 # set the device we will be using to train the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -43,16 +42,16 @@ testDataLoader = DataLoader(testData, batch_size=BATCH_SIZE)
 # calculate steps per epoch for training and validation set
 trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
 
-avg_ratios_p1 = []
-avg_ratios_p2 = []
+IMG_SIZE = 28
 
-def train(extrapolate):
+def train(scale, in_features, use_pool_std):
 	# initialize the LeNet model
 	model = LeNet(
 		numChannels=1,
 		classes=len(trainData.dataset.classes),
-		ks=11,
-		fc_in_features=(6050 if extrapolate else 800)).to(device)
+		ks=13,
+		fc_in_features=in_features,
+		pool_std=use_pool_std).to(device)
 
 	# initialize our optimizer and loss function
 	opt = Adam(model.parameters(), lr=INIT_LR)
@@ -61,52 +60,77 @@ def train(extrapolate):
 	for _ in range(EPOCHS):
 		model.train()
 		for (x, y) in trainDataLoader:
-			if (extrapolate):
-				x = F.interpolate(x, size=(56, 56), mode='bilinear', align_corners=False)
+			if (scale >= 2):
+				x = F.interpolate(x, size=(IMG_SIZE * scale, IMG_SIZE * scale), mode='bilinear', align_corners=False)
 
 			(x, y) = (x.to(device), y.to(device))
+			# print(x.shape)
+			# print(in_features)
 			pred = model(x)
 			loss = lossFn(pred, y)
 			opt.zero_grad()
 			loss.backward()
 			opt.step()
 	
-	return (model.pool1.t, model.pool2.t)
+	with torch.no_grad():
+		model.eval()
 
-for r in range(4):
-	print(f"Run {r}")
-	print("Train without interpolate")
-	(t1, t2) = train(False)
-	print("Train with interpolate")
-	(t3, t4) = train(True)
-	print()
+		preds = []
 
-	# print("Scale Experiment:")
-	# print(f"Scales pool1 before interpolation: {t1}")
-	# print(f"Mean scales pool1 before interpolation: {torch.mean(t1)}")
-	# print()
-	# print(f"Scales pool1 after interpolation: {t3}")
-	# print(f"Mean scales pool1 after interpolation: {torch.mean(t3)}")
-	# print()
-	# print(f"Scales pool2 before interpolation: {t2}")
-	# print(f"Mean scales pool2 before interpolation: {torch.mean(t2)}")
-	# print()
-	# print(f"Scales pool2 after interpolation: {t4}")
-	# print(f"Mean scales pool2 after interpolation: {torch.mean(t4)}")
-	# print()
-	# print(f"Ratio of pool1 after and before interpolation {t3 / t1}")
-	# print(f"Ratio of pool2 after and before interpolation {t4 / t2}")
-	# print()
-	# print(f"Average ratio of pool1 after and before interpolation {torch.mean(t3 / t1)}")
-	# print(f"Average ratio of pool2 after and before interpolation {torch.mean(t4 / t2)}")
+		for (x, y) in testDataLoader:
+			x = x.to(device)
+			if (scale >= 2):
+				x = F.interpolate(x, size=(IMG_SIZE * scale, IMG_SIZE * scale), mode='bilinear', align_corners=False)
 
-	avg_ratios_p1.append(torch.mean(t3 / t1).item())
-	avg_ratios_p2.append(torch.mean(t4 / t2).item())
+			pred = model(x)
+			preds.extend(pred.argmax(axis=1).cpu().numpy())
 
-data = {
-	"avg_ratios_p1": avg_ratios_p1,
-	"avg_ratios_p2": avg_ratios_p2
-}
+		class_report = classification_report(testData.targets.cpu().numpy(),
+												np.array(preds),
+												target_names=testData.classes,
+												output_dict=True)
 
-with open("experiments/scale_experiment.json", "w") as outfile:
-    json.dump(data, outfile)
+	return (model.pool1.t.tolist(), model.pool2.t.tolist(), class_report["accuracy"])
+
+def collect_data(std_pool):
+	data = {}
+
+	print(f"Standard pool: {std_pool}")
+	for img_scale in range(1, 5):
+		print(f"Scale {img_scale}:")
+
+		scales_p1 = []
+		scales_p2 = []
+		acc = []
+
+		for (x, _) in trainDataLoader:
+			x = F.interpolate(x, size=(IMG_SIZE * img_scale, IMG_SIZE * img_scale), mode='bilinear', align_corners=False)
+			x = x.to(device)
+			in_features = LeNet(numChannels=1, classes=len(trainData.dataset.classes)).to(device)._calculate_num_features(x)
+			break
+		
+		print(f"Num features for FCC: {in_features}")
+
+		for r in range(RUNS):
+			print(f"Run {r}:")
+			(t1, t2, accuracy) = train(img_scale, in_features, std_pool)
+		
+			scales_p1.append(t1)
+			scales_p2.append(t2)
+			acc.append(accuracy)
+		
+		data[img_scale] = {}
+		data[img_scale]["scales_p1"] = scales_p1
+		data[img_scale]["scales_p2"] = scales_p2
+		data[img_scale]["accuracies"] = acc
+
+		print(data[img_scale])
+
+	with open("experiments/scale_experiment_standard.json" if std_pool else "experiments/scale_experiment_normalized.json", "w") as outfile:
+		json.dump(data, outfile)
+
+# Using standard SE
+collect_data(True)
+
+# Using normalized SE
+collect_data(False)
