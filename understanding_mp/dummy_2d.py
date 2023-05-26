@@ -88,7 +88,7 @@ class Dilation2D(nn.Module):
         return out
 
 f = torch.from_numpy(f)
-g = Dilation2D(100, True)(f).clone().detach()
+g = Dilation2D(50, True)(f).clone().detach()
 
 # Use simple MSE error
 def error(y, y_pred):
@@ -99,8 +99,8 @@ fig = plt.figure(figsize=(12,9))
 ax = fig.add_subplot(111, projection='3d')
 
 # Plot the surface
-ax.plot_surface(X, Y, f, cmap='viridis')
-ax.plot_surface(X, Y, g, cmap='Accent')
+ax.plot_surface(X, Y, f, color='blue')
+ax.plot_surface(X, Y, g, color='orange')
 
 # Set labels and title
 ax.set_xlabel('X')
@@ -110,24 +110,6 @@ ax.set_title("$f$", fontsize=40)
 
 # Show the plot
 plt.show()
-
-# Create a figure and axes
-fig = plt.figure(figsize=(12,9))
-ax = fig.add_subplot(111, projection='3d')
-
-# Plot the surface
-ax.plot_surface(X, Y, g, cmap='viridis')
-
-# Set labels and title
-ax.set_xlabel('X')
-ax.set_ylabel('Y')
-ax.set_zlabel('Z')
-ax.set_title("$g$", fontsize=40)
-
-# Show the plot
-plt.show()
-
-exit()
 
 iterations = {10, 20, 50, 80, 100}
 n_iterations = 100
@@ -158,9 +140,9 @@ def train(s, standard):
 
         optimizer.step()
 
-    return model.h
+    return model.h.detach().numpy()
 
-h = train(50, True)
+h = train(25, True)
 
 # Create a figure and axes
 fig = plt.figure(figsize=(12,9))
@@ -178,7 +160,7 @@ ax.set_title("$q^s$ with standard formula", fontsize=40)
 # Show the plot
 plt.show()
 
-h = train(50, False)
+h = train(5, False)
 
 # Create a figure and axes
 fig = plt.figure(figsize=(12,9))
