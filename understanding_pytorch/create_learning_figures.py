@@ -25,13 +25,13 @@ k_size = 201
 
 # Input
 domain_x = np.linspace(-100, 100, 201)
-f = torch.tensor([math.sin(0.1*x) + math.cos(0.05*x) for x in domain_x], dtype=torch.float32)
+f = torch.tensor([math.sin(0.1*x) + math.cos(0.05*x) for x in domain_x], dtype=torch.float64)
 
 class Dilation1D(nn.Module):
     def __init__(self, s):
         super(Dilation1D, self).__init__()
         # scale
-        scale = torch.tensor(s, dtype=torch.float32)
+        scale = torch.tensor(s, dtype=torch.float64)
         self.scale = torch.nn.parameter.Parameter(scale, requires_grad=True)
 
     def forward(self, input=None):
@@ -39,7 +39,7 @@ class Dilation1D(nn.Module):
             raise ValueError("Input tensor must be provided")
         
         # h(z) = -(||z||**2) / 4s
-        z_i =  torch.linspace(-k_size // 2 + 1, k_size // 2, k_size, dtype=torch.float32)
+        z_i =  torch.linspace(-k_size // 2 + 1, k_size // 2, k_size, dtype=torch.float64)
         self.z = z_i ** 2
         self.h = -self.z / (4*self.scale)
 
@@ -162,3 +162,17 @@ for gradient in gradients:
 
 print(f'Average difference eq 3.10: {sum(diff) / len(diff)}') # 9.038868264976685e-11
 print(f'Average percentage difference eq 3.10: {sum(percentage_diff) / len(percentage_diff)}') # 6.047777787898667e-06 %
+
+# Calculate average gradients
+gradient_pytorch = []
+gradient_eq_3_9 = []
+gradient_eq_3_10 = []
+
+for gradient in gradients:
+    gradient_pytorch.append(gradient[0])
+    gradient_eq_3_9.append(gradient[1])
+    gradient_eq_3_10.append(gradient[2])
+
+print(f'Average gradient torch: {sum(gradient_pytorch) / len(gradient_pytorch)}')
+print(f'Average gradient 3.9: {sum(gradient_eq_3_9) / len(gradient_pytorch)}')
+print(f'Average gradient 3.10: {sum(gradient_eq_3_10) / len(gradient_pytorch)}')

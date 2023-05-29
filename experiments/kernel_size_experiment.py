@@ -92,7 +92,7 @@ def train_and_store(kernel_size):
 			numChannels=1,
 			classes=len(trainData.dataset.classes),
 			ks=kernel_size,
-			pool_std=True).to(device)
+			pool_std=False).to(device)
 
 		# initialize our optimizer and loss function
 		opt = Adam(model.parameters(), lr=INIT_LR)
@@ -154,5 +154,5 @@ for ks in kernel_sizes:
 
 print(data)
 
-with open("experiments/kernel_size_experiment_standard_with_higher_starting_scale.json", "w") as outfile:
+with open("experiments/kernel_size_experiment_mp_with_higher_starting_scale.json", "w") as outfile:
     json.dump(data, outfile)
