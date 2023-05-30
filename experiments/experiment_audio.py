@@ -29,8 +29,8 @@ torch.manual_seed(0)
 
 # define training hyperparameters
 INIT_LR = 1e-3
-BATCH_SIZE = 32
-EPOCHS = 10
+BATCH_SIZE = 16
+EPOCHS = 1
 
 # set the device we will be using to train the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -55,13 +55,16 @@ word_list = ['marvin', 'four', 'follow', 'stop', 'backward',
 
 word_dict = {word: i for i, word in enumerate(word_list, start=1)}
 
+signal_length = 16000
+
 def collate_fn(batch):
 	# ADD PADDING!!!
 	audio = [item[0].tolist() for item in batch]
+	audio_padded = [[signal[0] + [0] * (signal_length - len(signal[0]))] if len(signal[0]) <= signal_length else [signal[0][:signal_length]] 
+		 			for signal in audio]
 	labels = [item[2] for item in batch]
 	labels_numeric = [word_dict[label] for label in labels]
-	print(torch.tensor(audio).shape)
-	return torch.tensor(audio), torch.tensor(labels_numeric)
+	return torch.tensor(audio_padded), torch.tensor(labels_numeric)
 
 # initialize the train, validation, and test data loaders
 trainDataLoader = DataLoader(trainData, shuffle=True, batch_size=BATCH_SIZE, collate_fn=collate_fn)
@@ -71,25 +74,33 @@ testDataLoader = DataLoader(testData, batch_size=BATCH_SIZE, collate_fn=collate_
 # calculate steps per epoch for training and validation set
 trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
 
+print(trainSteps)
+
 model = MorphAudioModel(1, len(word_list)).to(device)
 
 # initialize our optimizer and loss function
 opt = Adam(model.parameters(), lr=INIT_LR)
 lossFn = nn.NLLLoss()
 
+step = 1
+
 startTime = time.time()
 for _ in range(EPOCHS):
 	model.train()
 
 	for (x, y) in trainDataLoader:
-		break
 		(x, y) = (x.to(device), y.to(device))
 		pred = model(x)
 		loss = lossFn(pred, y)
 		opt.zero_grad()
 		loss.backward()
 		opt.step()
+
+		print(f"Step {step} done. {trainSteps - step} to go.")
+		step += 1
 totalTime = time.time() - startTime
+
+print(totalTime)
 
 with torch.no_grad():
 	model.eval()
