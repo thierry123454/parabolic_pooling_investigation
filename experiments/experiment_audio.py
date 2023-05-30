@@ -53,7 +53,7 @@ word_list = ['marvin', 'four', 'follow', 'stop', 'backward',
 			 'bird', 'learn', 'right', 'up', 'zero', 'six', 'yes', 
 			 'nine', 'down', 'seven', 'bed']
 
-word_dict = {word: i for i, word in enumerate(word_list, start=1)}
+word_dict = {word: i for i, word in enumerate(word_list)}
 
 signal_length = 16000
 
@@ -74,8 +74,6 @@ testDataLoader = DataLoader(testData, batch_size=BATCH_SIZE, collate_fn=collate_
 # calculate steps per epoch for training and validation set
 trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
 
-print(trainSteps)
-
 model = MorphAudioModel(1, len(word_list)).to(device)
 
 # initialize our optimizer and loss function
@@ -91,10 +89,15 @@ for _ in range(EPOCHS):
 	for (x, y) in trainDataLoader:
 		(x, y) = (x.to(device), y.to(device))
 		pred = model(x)
+		print("Prediction made")
 		loss = lossFn(pred, y)
+		print("Loss calculated")
 		opt.zero_grad()
+		print("Starting backward pass")
 		loss.backward()
+		print("Optimizng...")
 		opt.step()
+		print("DOne!")
 
 		print(f"Step {step} done. {trainSteps - step} to go.")
 		step += 1
