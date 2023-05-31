@@ -122,23 +122,25 @@ class MorphAudioModel(Module):
 		self.pool1 = ParabolicPool1DFast(numChannels, 3, 1)
 		self.conv1 = Conv1d(in_channels=numChannels, out_channels=2, kernel_size=5)
 		self.relu1 = ReLU()
-		self.pool1 = ParabolicPool1DFast(2, 7, 3)
+		self.pool2 = ParabolicPool1DFast(2, 7, 3)
 		self.conv2 = Conv1d(in_channels=2, out_channels=4, kernel_size=5)
 		self.relu2 = ReLU()
-		self.pool2 = ParabolicPool1DFast(4, 7, 2)
+		self.pool3 = ParabolicPool1DFast(4, 7, 2)
 		self.fc1 = Linear(in_features=10656, out_features=250)
 		self.relu3 = ReLU()
 		self.fc2 = Linear(in_features=250, out_features=classes)
 		self.logSoftmax = LogSoftmax(dim=1)
 
 	def forward(self, x):
+		x = self.pool1(x)
+
 		x = self.conv1(x)
 		x = self.relu1(x)
-		x = self.pool1(x)
+		x = self.pool2(x)
 
 		x = self.conv2(x)
 		x = self.relu2(x)
-		x = self.pool2(x)
+		x = self.pool3(x)
 
 		x = flatten(x, 1)
 		x = self.fc1(x)

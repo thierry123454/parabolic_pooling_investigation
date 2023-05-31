@@ -98,9 +98,11 @@ for _ in range(EPOCHS):
 		# print("Done...")
 		opt.step()
 
+		print(f"Loss: {loss}")
+		print(f"Step duration: {time.time() - stepTime}")
 		print(f"Step {step} done. {trainSteps - step} to go.")
-		print(time.time() - stepTime)
 		step += 1
+		break
 		if (step >= 150):
 			break
 totalTime = time.time() - startTime
@@ -117,15 +119,20 @@ with torch.no_grad():
 		x = x.to(device)
 		pred = model(x)
 		preds.extend(pred.argmax(axis=1).cpu().numpy())
-		# voeg target toe en gebruik dat voor classification report.
+		targets.extend(y.numpy())
 
-		print(f"Evaluation step {step} done. {testSteps - step} to go.")
+		print()
+		print(f"Prediction: {pred}")
+		print(f"Target: {y}")
+		print(f"Evaluation step {step} done. {testSteps + 2 - step} to go.")
+
 		step += 1
+		break
 
-class_report = classification_report(testData.targets.cpu().numpy(),
-										np.array(preds),
-										target_names=testData.classes,
-										output_dict=True)
+class_report = classification_report(targets,
+									 preds,
+									 target_names=word_list,
+									 output_dict=True)
 
 print("STATS!")
 print(class_report["accuracy"])
