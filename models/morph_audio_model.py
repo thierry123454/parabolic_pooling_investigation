@@ -6,6 +6,7 @@ from torch.nn import LogSoftmax
 from torch.nn import MaxPool2d
 from torch import flatten
 import torch
+import matplotlib.pyplot as plt
 
 torch.manual_seed(0)
 
@@ -69,7 +70,7 @@ class ParabolicPool1DFast(Module):
 		self.device = device
 
 		t = torch.empty((in_channels, ))
-		torch.nn.init.uniform_(t, a=0.0, b=4.0)
+		torch.nn.init.uniform_(t, a=10000.0, b=20000.0)
 		self.t = torch.nn.parameter.Parameter(t, requires_grad=True)
 
 	def _compute_parabolic_kernel(self):
@@ -83,27 +84,28 @@ class ParabolicPool1DFast(Module):
 		h = self._compute_parabolic_kernel()
 
 		out = torch.zeros_like(f)
+		padding = torch.tensor([float('-inf')] * (len(h[0]) // 2)).to(torch.device(self.device))
+		input_matrix = torch.empty((f.shape[2], len(h[0])), dtype=torch.float32).to(torch.device(self.device))
 
         # Calculate (f dilate h)(x) = max{f(x-y) + h(y) for all y in h}
 		for b in range(f.shape[0]):
 			for c in range(f.shape[1]):
 				kernel = h[c]
-
-				input_matrix = torch.empty((f.shape[2], len(kernel)), dtype=torch.float32).to(torch.device(self.device))
 				input_signal = f[b][c]
 
-				N = input_matrix.shape[0]
-				for r in range(N):
-					if (r <= len(kernel) // 2):
-						input_matrix[r] = torch.cat((torch.tensor([float('-inf')] * (len(kernel) // 2 - r)).to(torch.device(self.device)), input_signal[:len(kernel) - (len(kernel) // 2 - r)]))
-					elif (r >= N - len(kernel) // 2):
-						off = r - (N - len(kernel) // 2)
-						input_matrix[r] = torch.cat((input_signal[N-len(kernel)+1+off:], torch.tensor([float('-inf')] * (off + 1)).to(torch.device(self.device))))
-					else:    
-						input_matrix[r] = input_signal[r - len(kernel) // 2 : r + len(kernel) // 2 + 1]
+				padded = torch.cat((padding, input_signal, padding))
+
+				# Place the values of the tensor on the diagonals of the matrix
+				input_matrix = padded.unfold(0, len(kernel), 1)
+
+				# print(f"Signal for batch {b} and channel {c}.")
+				# print(kernel)
+				# print(input_signal)
+				# print(f"unique: {torch.unique(input_signal)}")
 
 				add_inp_h = input_matrix + kernel
 				output, _ = torch.max(add_inp_h, dim=1)
+				# print(output)
 				out[b][c] = output
 		out = torch.as_strided(out, size=(out.shape[0], out.shape[1], out.shape[2] // self.stride), stride=(1, 1, self.stride))
 		return out
@@ -112,20 +114,22 @@ class MorphAudioModel(Module):
 	def __init__(self, numChannels, classes):
 		# call the parent constructor
 		super(MorphAudioModel, self).__init__()
-		self.pool1 = ParabolicPool1DFast(numChannels, 3, 1)
-		self.conv1 = Conv1d(in_channels=numChannels, out_channels=2, kernel_size=5)
+		self.pool1 = ParabolicPool1DFast(numChannels, 2001, 2)
+		self.conv1 = Conv1d(in_channels=numChannels, out_channels=3, kernel_size=2001)
 		self.relu1 = ReLU()
-		self.pool2 = ParabolicPool1DFast(2, 7, 3)
-		self.conv2 = Conv1d(in_channels=2, out_channels=4, kernel_size=5)
+		self.pool2 = ParabolicPool1DFast(3, 2001, 2)
+		self.conv2 = Conv1d(in_channels=3, out_channels=5, kernel_size=2001)
 		self.relu2 = ReLU()
-		self.pool3 = ParabolicPool1DFast(4, 7, 2)
-		self.fc1 = Linear(in_features=10656, out_features=250)
+		self.pool3 = ParabolicPool1DFast(5, 2001, 2)
+		self.fc1 = Linear(in_features=2500, out_features=500)
 		self.relu3 = ReLU()
-		self.fc2 = Linear(in_features=250, out_features=classes)
+		self.fc2 = Linear(in_features=500, out_features=classes)
 		self.logSoftmax = LogSoftmax(dim=1)
 
 	def forward(self, x):
 		x = self.pool1(x)
+		# plt.plot((x.detach().cpu())[0][0])
+		# plt.show()
 
 		x = self.conv1(x)
 		x = self.relu1(x)

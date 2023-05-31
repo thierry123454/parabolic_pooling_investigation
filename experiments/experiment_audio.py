@@ -69,7 +69,7 @@ def collate_fn(batch):
 # initialize the train, validation, and test data loaders
 trainDataLoader = DataLoader(trainData, shuffle=True, batch_size=BATCH_SIZE, collate_fn=collate_fn)
 valDataLoader = DataLoader(valData, shuffle=True, batch_size=BATCH_SIZE, collate_fn=collate_fn)
-testDataLoader = DataLoader(testData, batch_size=BATCH_SIZE, collate_fn=collate_fn)
+testDataLoader = DataLoader(testData, shuffle=True, batch_size=BATCH_SIZE, collate_fn=collate_fn)
 
 # calculate steps per epoch for training and validation set
 trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
@@ -90,6 +90,10 @@ for _ in range(EPOCHS):
 	for (x, y) in trainDataLoader:
 		stepTime = time.time()
 		(x, y) = (x.to(device), y.to(device))
+		# plt.plot((x.cpu())[0][0])
+		# plt.show()
+		# exit()
+
 		pred = model(x)
 		loss = lossFn(pred, y)
 		opt.zero_grad()
@@ -98,13 +102,13 @@ for _ in range(EPOCHS):
 		# print("Done...")
 		opt.step()
 
+
+		print(pred.argmax(axis=1).cpu().numpy())
+		# print(y)
 		print(f"Loss: {loss}")
 		print(f"Step duration: {time.time() - stepTime}")
 		print(f"Step {step} done. {trainSteps - step} to go.")
 		step += 1
-		break
-		if (step >= 150):
-			break
 totalTime = time.time() - startTime
 
 step = 1
@@ -127,7 +131,7 @@ with torch.no_grad():
 		print(f"Evaluation step {step} done. {testSteps + 2 - step} to go.")
 
 		step += 1
-		break
+		# break
 
 class_report = classification_report(targets,
 									 preds,

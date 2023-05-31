@@ -35,20 +35,12 @@ class Dilation1D(nn.Module):
 
         mat = torch.empty((input.shape[0], len(h)), dtype=torch.float32)
 
-        N = mat.shape[0]
-        for r in range(N):
-            if (r <= len(h) // 2):
-                mat[r] = torch.cat((torch.tensor([float('-inf')] * (len(h) // 2 - r)), input[:len(h) - (len(h) // 2 - r)]))
-            elif (r >= N - len(h) // 2):
-                off = r - (N - len(h) // 2)
-                mat[r] = torch.cat((input[N-len(h)+1+off:], torch.tensor([float('-inf')] * (off + 1))))
-            else:    
-                mat[r] = input[r - len(h) // 2 : r + len(h) // 2 + 1]
-        
-        repeated_tensors = [h] * f.shape[0]
-        h_matrix = torch.stack(repeated_tensors)
+        padded = torch.cat((torch.tensor([float('-inf')] * (len(h) // 2)), f, torch.tensor([float('-inf')] * (len(h) // 2))))
 
-        add_inp_h = mat + h_matrix
+        # Place the values of the tensor on the diagonals of the matrix
+        mat = padded.unfold(0, len(h), 1)
+        
+        add_inp_h = mat + h
 
         out, _ = torch.max(add_inp_h, dim=1)
         
