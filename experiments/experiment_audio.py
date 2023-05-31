@@ -74,6 +74,8 @@ testDataLoader = DataLoader(testData, batch_size=BATCH_SIZE, collate_fn=collate_
 # calculate steps per epoch for training and validation set
 trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
 
+testSteps = len(testDataLoader.dataset) // BATCH_SIZE
+
 model = MorphAudioModel(1, len(word_list)).to(device)
 
 # initialize our optimizer and loss function
@@ -85,41 +87,47 @@ step = 1
 startTime = time.time()
 for _ in range(EPOCHS):
 	model.train()
-
 	for (x, y) in trainDataLoader:
+		stepTime = time.time()
 		(x, y) = (x.to(device), y.to(device))
 		pred = model(x)
-		print("Prediction made")
 		loss = lossFn(pred, y)
-		print("Loss calculated")
 		opt.zero_grad()
-		print("Starting backward pass")
+		# print("Starting backward pass")
 		loss.backward()
-		print("Optimizng...")
+		# print("Done...")
 		opt.step()
-		print("DOne!")
 
 		print(f"Step {step} done. {trainSteps - step} to go.")
+		print(time.time() - stepTime)
 		step += 1
+		if (step >= 150):
+			break
 totalTime = time.time() - startTime
 
-print(totalTime)
+step = 1
 
 with torch.no_grad():
 	model.eval()
 
 	preds = []
+	targets = []
 
 	for (x, y) in testDataLoader:
 		x = x.to(device)
 		pred = model(x)
 		preds.extend(pred.argmax(axis=1).cpu().numpy())
+		# voeg target toe en gebruik dat voor classification report.
+
+		print(f"Evaluation step {step} done. {testSteps - step} to go.")
+		step += 1
 
 class_report = classification_report(testData.targets.cpu().numpy(),
 										np.array(preds),
 										target_names=testData.classes,
 										output_dict=True)
 
+print("STATS!")
 print(class_report["accuracy"])
 print(class_report["macro avg"]["f1-score"])
 print(class_report["macro avg"]["precision"])

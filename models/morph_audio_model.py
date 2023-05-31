@@ -83,33 +83,33 @@ class ParabolicPool1DFast(Module):
 		h = self._compute_parabolic_kernel()
 
 		num_channels = f.shape[1]
-		N = f.shape[2]
-
-		h_matrices = torch.full((num_channels, N, N), float('-inf')).to(torch.device(self.device))
+		h_matrices = torch.empty((num_channels, f.shape[2], self.ks)).to(torch.device(self.device))
 
 		for c in range(num_channels):
-			# Place the values of the tensor on the diagonals of the matrix
-			for i in range(N):
-				end = i + len(h[c]) // 2 + 1
-				end = end if end <= N else N
-				start = max(i - len(h[c]) // 2, 0)
-				
-				end_vec = end - i - (len(h[c]) // 2 + 1)
-				start_vec = max(len(h[c]) // 2 - i, 0)
-
-				if (end_vec == 0):
-					h_matrices[c][i, start:end] = h[c][start_vec:]
-				else:
-					h_matrices[c][i, start:end] = h[c][start_vec:end_vec]
+			repeated_tensors = [h[c]] * f.shape[2]
+			h_matrices[c] = torch.stack(repeated_tensors)
 
 		out = torch.zeros_like(f)
 
         # Calculate (f dilate h)(x) = max{f(x-y) + h(y) for all y in h}
 		for b in range(f.shape[0]):
 			for c in range(f.shape[1]):
-				repeated_tensors = [f[b][c]] * N
-				input_repeat = torch.stack(repeated_tensors)
-				add_inp_h = input_repeat + h_matrices[c]
+				kernel = h[c]
+
+				input_matrix = torch.empty((f.shape[2], len(kernel)), dtype=torch.float32).to(torch.device(self.device))
+				input_signal = f[b][c]
+
+				N = input_matrix.shape[0]
+				for r in range(N):
+					if (r <= len(kernel) // 2):
+						input_matrix[r] = torch.cat((torch.tensor([float('-inf')] * (len(kernel) // 2 - r)).to(torch.device(self.device)), input_signal[:len(kernel) - (len(kernel) // 2 - r)]))
+					elif (r >= N - len(kernel) // 2):
+						off = r - (N - len(kernel) // 2)
+						input_matrix[r] = torch.cat((input_signal[N-len(kernel)+1+off:], torch.tensor([float('-inf')] * (off + 1)).to(torch.device(self.device))))
+					else:    
+						input_matrix[r] = input_signal[r - len(kernel) // 2 : r + len(kernel) // 2 + 1]
+
+				add_inp_h = input_matrix + h_matrices[c]
 				output, _ = torch.max(add_inp_h, dim=1)
 				out[b][c] = output
 		out = torch.as_strided(out, size=(out.shape[0], out.shape[1], out.shape[2] // self.stride), stride=(1, 1, self.stride))
@@ -122,13 +122,13 @@ class MorphAudioModel(Module):
 		self.pool1 = ParabolicPool1DFast(numChannels, 3, 1)
 		self.conv1 = Conv1d(in_channels=numChannels, out_channels=2, kernel_size=5)
 		self.relu1 = ReLU()
-		self.pool1 = ParabolicPool1DFast(3, 7, 3)
+		self.pool1 = ParabolicPool1DFast(2, 7, 3)
 		self.conv2 = Conv1d(in_channels=2, out_channels=4, kernel_size=5)
 		self.relu2 = ReLU()
-		self.pool2 = ParabolicPool1DFast(5, 7, 3)
-		self.fc1 = Linear(in_features=7104, out_features=100)
+		self.pool2 = ParabolicPool1DFast(4, 7, 2)
+		self.fc1 = Linear(in_features=10656, out_features=250)
 		self.relu3 = ReLU()
-		self.fc2 = Linear(in_features=100, out_features=classes)
+		self.fc2 = Linear(in_features=250, out_features=classes)
 		self.logSoftmax = LogSoftmax(dim=1)
 
 	def forward(self, x):
@@ -136,19 +136,15 @@ class MorphAudioModel(Module):
 		x = self.relu1(x)
 		x = self.pool1(x)
 
-		print("First part")
-
 		x = self.conv2(x)
 		x = self.relu2(x)
 		x = self.pool2(x)
-		print("Second part")
 
 		x = flatten(x, 1)
 		x = self.fc1(x)
 		x = self.relu3(x)
 
 		x = self.fc2(x)
-		print("FCC")
 		output = self.logSoftmax(x)
 
 		return output

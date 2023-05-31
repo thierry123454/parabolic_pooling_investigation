@@ -2,31 +2,31 @@ import torch
 from torch.nn.functional import unfold
 import numpy as np
 
-f = torch.tensor([2*x for x in range(10)], dtype=torch.float32)
+f = torch.tensor([x for x in range(1,15)], dtype=torch.float32)
 
 # Initialize the tensor
-x = torch.tensor([2, 1, 0, 1, 2], dtype=torch.float32)
+x = torch.tensor([3, 2, 1, 0, 1, 2, 3], dtype=torch.float32)
 
 
 # # Initialize the target matrix with -inf
-# mat = torch.full((f.shape[0], f.shape[0]), float('-inf'))
+mat = torch.empty((f.shape[0], len(x)), dtype=torch.float32)
+
+print(mat)
 
 # print(mat.shape)
 
-# # Place the values of the tensor on the diagonals of the matrix
-# N = mat.shape[0]
-# for i in range(N):
-#     end = i + len(x) // 2 + 1
-#     end = end if end <= N else N
-#     start = max(i - len(x) // 2, 0)
-    
-#     end_vec = end - i - (len(x) // 2 + 1)
-#     start_vec = max(len(x) // 2 - i, 0)
+# print(f[:len(x) - 1])
+# print(torch.tensor(float('-inf')))
 
-#     if (end_vec == 0):
-#         mat[i, start:end] = x[start_vec:]
-#     else:
-#         mat[i, start:end] = x[start_vec:end_vec]
-
+# Place the values of the tensor on the diagonals of the matrix
+N = mat.shape[0]
+for r in range(N):
+    if (r <= len(x) // 2):
+        mat[r] = torch.cat((torch.tensor([float('-inf')] * (len(x) // 2 - r)), f[:len(x) - (len(x) // 2 - r)]))
+    elif (r >= N - len(x) // 2):
+        off = r - (N - len(x) // 2)
+        mat[r] = torch.cat((f[N-len(x)+1+off:], torch.tensor([float('-inf')] * (off + 1))))
+    else:    
+        mat[r] = f[r - len(x) // 2 : r + len(x) // 2 + 1]
 # Show the result
-print(unfold(f, len(x)))
+print(mat)
