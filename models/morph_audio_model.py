@@ -82,13 +82,6 @@ class ParabolicPool1DFast(Module):
 	def forward(self, f: torch.Tensor) -> torch.Tensor:
 		h = self._compute_parabolic_kernel()
 
-		num_channels = f.shape[1]
-		h_matrices = torch.empty((num_channels, f.shape[2], self.ks)).to(torch.device(self.device))
-
-		for c in range(num_channels):
-			repeated_tensors = [h[c]] * f.shape[2]
-			h_matrices[c] = torch.stack(repeated_tensors)
-
 		out = torch.zeros_like(f)
 
         # Calculate (f dilate h)(x) = max{f(x-y) + h(y) for all y in h}
@@ -109,7 +102,7 @@ class ParabolicPool1DFast(Module):
 					else:    
 						input_matrix[r] = input_signal[r - len(kernel) // 2 : r + len(kernel) // 2 + 1]
 
-				add_inp_h = input_matrix + h_matrices[c]
+				add_inp_h = input_matrix + kernel
 				output, _ = torch.max(add_inp_h, dim=1)
 				out[b][c] = output
 		out = torch.as_strided(out, size=(out.shape[0], out.shape[1], out.shape[2] // self.stride), stride=(1, 1, self.stride))

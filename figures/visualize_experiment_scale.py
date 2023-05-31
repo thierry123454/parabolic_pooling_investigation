@@ -149,7 +149,7 @@ def plot_fraction(axis, scale_key, data_dict, legend=False):
     x = ["$S_1 / S_1$", "$S_2 / S_1$", "$S_3 / S_1$", "$S_4 / S_1$"]
 
     axis.bar(x, avg_factors)
-    # axis.errorbar(x, avg_factors, yerr=std_factors, fmt='o', color='red')
+    axis.errorbar(x, avg_factors, yerr=std_factors, fmt='o', color='red')
 
     axis.grid()
 

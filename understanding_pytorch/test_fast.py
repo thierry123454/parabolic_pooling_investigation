@@ -7,7 +7,6 @@ f = torch.tensor([x for x in range(1,15)], dtype=torch.float32)
 # Initialize the tensor
 x = torch.tensor([3, 2, 1, 0, 1, 2, 3], dtype=torch.float32)
 
-
 # # Initialize the target matrix with -inf
 mat = torch.empty((f.shape[0], len(x)), dtype=torch.float32)
 
