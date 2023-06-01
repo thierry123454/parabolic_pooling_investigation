@@ -30,7 +30,7 @@ torch.manual_seed(0)
 # define training hyperparameters
 INIT_LR = 1e-3
 BATCH_SIZE = 16
-EPOCHS = 1
+EPOCHS = 10
 
 # set the device we will be using to train the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
