@@ -12,9 +12,11 @@ torch.manual_seed(0)
 class LeNet(Module):
 	# Pooling Method paramet!
 	# Determine FC input featuress
-	def __init__(self, numChannels, classes, ks=3, fc_in_features=800, pool_std=True, scale=1):
+	def __init__(self, numChannels, classes, ks=3, fc_in_features=800, pool_std=True, scale=1, check_poi=False, pool_init='uniform'):
 		# call the parent constructor
 		super(LeNet, self).__init__()
+
+		self.check_poi = check_poi
 
 		# Scale kernel sizes with scale of image.
 		conv_size = 5 * scale
@@ -25,13 +27,13 @@ class LeNet(Module):
 		self.conv1 = Conv2d(in_channels=numChannels, out_channels=20,
 			kernel_size=(conv_size, conv_size))
 		self.relu1 = ReLU()
-		self.pool1 = ParabolicPool2D_V2(20, ks) if pool_std else ParabolicPool2D(20, ks)
+		self.pool1 = ParabolicPool2D_V2(20, ks, init=pool_init) if pool_std else ParabolicPool2D(20, ks)
 
 		# initialize second set of CONV => RELU => POOL layers
 		self.conv2 = Conv2d(in_channels=20, out_channels=50,
 			kernel_size=(conv_size, conv_size))
 		self.relu2 = ReLU()
-		self.pool2 = ParabolicPool2D_V2(50, ks) if pool_std else ParabolicPool2D(50, ks)
+		self.pool2 = ParabolicPool2D_V2(50, ks, init=pool_init) if pool_std else ParabolicPool2D(50, ks)
 
 		# initialize first (and only) set of FC => RELU layers
 		self.fc1 = Linear(in_features=fc_in_features, out_features=500)
@@ -46,12 +48,12 @@ class LeNet(Module):
 		# POOL layers
 		x = self.conv1(x)
 		x = self.relu1(x)
-		x, _ = self.pool1(x)
+		x, _, poi_counter = self.pool1(x)
 		# pass the output from the previous layer through the second
 		# set of CONV => RELU => POOL layers
 		x = self.conv2(x)
 		x = self.relu2(x)
-		x, _ = self.pool2(x)
+		x, _, _ = self.pool2(x)
 		# flatten the output from the previous layer and pass it
 		# through our only set of FC => RELU layers
 		x = flatten(x, 1)
@@ -62,16 +64,19 @@ class LeNet(Module):
 		# predictions
 		x = self.fc2(x)
 		output = self.logSoftmax(x)
-		# return the output predictions
-		return output
+	
+		if not self.check_poi:
+			return output
+		else:
+			return output, poi_counter
 	
 	def _calculate_num_features(self, x):
 		# Calculate the number of features based on the shape of x
 		with torch.no_grad():
 			x = self.conv1(x)
 			x = self.relu1(x)
-			x, _ = self.pool1(x)
+			x, _, _ = self.pool1(x)
 			x = self.conv2(x)
 			x = self.relu2(x)
-			x, _ = self.pool2(x)
+			x, _, _ = self.pool2(x)
 		return x.shape[1] * x.shape[2] * x.shape[3]

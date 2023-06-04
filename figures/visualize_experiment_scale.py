@@ -143,6 +143,16 @@ def plot_fraction(axis, scale_key, data_dict, legend=False):
     for key in data.keys():
         scales = np.array(data_dict[key][scale_key]).flatten()
         factors = scales / scales_factor_1
+
+        # print(f"Scale: {key}")
+        # for i, factor in enumerate(factors):
+        #     print(factor)
+        #     if (factor >= 10):
+        #         print("GROTE FACTOR:")
+        #         print(scales_factor_1[i])
+        #         print(scales[i])
+        #         print()
+
         avg_factors.append(np.mean(factors))
         std_factors.append(np.std(factors))
 

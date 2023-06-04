@@ -114,20 +114,20 @@ class MorphAudioModel(Module):
 	def __init__(self, numChannels, classes):
 		# call the parent constructor
 		super(MorphAudioModel, self).__init__()
-		self.pool1 = ParabolicPool1DFast(numChannels, 2001, 2)
+		# self.pool1 = ParabolicPool1DFast(numChannels, 2001, 2)
 		self.conv1 = Conv1d(in_channels=numChannels, out_channels=3, kernel_size=2001)
 		self.relu1 = ReLU()
 		self.pool2 = ParabolicPool1DFast(3, 2001, 2)
 		self.conv2 = Conv1d(in_channels=3, out_channels=5, kernel_size=2001)
 		self.relu2 = ReLU()
 		self.pool3 = ParabolicPool1DFast(5, 2001, 2)
-		self.fc1 = Linear(in_features=2500, out_features=500)
+		self.fc1 = Linear(in_features=12500, out_features=500)
 		self.relu3 = ReLU()
 		self.fc2 = Linear(in_features=500, out_features=classes)
 		self.logSoftmax = LogSoftmax(dim=1)
 
 	def forward(self, x):
-		x = self.pool1(x)
+		# x = self.pool1(x)
 		# plt.plot((x.detach().cpu())[0][0])
 		# plt.show()
 

@@ -24,7 +24,7 @@ from models.standard_lenet import LeNet_Standard
 INIT_LR = 1e-3
 BATCH_SIZE = 32
 EPOCHS = 5
-RUNS = 10
+RUNS = 20
 
 # set the device we will be using to train the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -52,7 +52,7 @@ data = {}
 
 first = True
 
-def train_and_store(standard):
+def train_and_store(standard, standard_se, scale_space):
 	global first
 
 	accuracy = []
@@ -93,8 +93,9 @@ def train_and_store(standard):
 			model = LeNet(
 				numChannels=1,
 				classes=len(trainData.dataset.classes),
-				ks=5,
-				pool_std=True).to(device)
+				ks=5 if not scale_space else 7,
+				pool_std=standard_se,
+				pool_init='scale_space' if scale_space else 'uniform').to(device)
 
 		# initialize our optimizer and loss function
 		opt = Adam(model.parameters(), lr=INIT_LR)
@@ -134,7 +135,11 @@ def train_and_store(standard):
 		avg_recall.append(class_report["macro avg"]["recall"])
 		times.append(totalTime)
 	
-	data["standard" if standard else "parabolic"] = {
+	uses_scale_space = "_scale_space" if scale_space else ""
+
+	parabolic_key = "std_parabolic" + uses_scale_space if standard_se else "mp_parabola"
+
+	data["standard" if standard else parabolic_key] = {
 		"accuracy": accuracy,
 		"avg_f1": avg_f1,
 		"avg_precision": avg_precision,
@@ -145,10 +150,16 @@ def train_and_store(standard):
 	print(data)
 
 # Train standard LeNet
-train_and_store(True)
+train_and_store(True, False, False)
+
+# Train LeNet with MP Parabolic Dilation
+train_and_store(False, False, False)
 
 # Train LeNet with Parabolic Dilation
-train_and_store(False)
+train_and_store(False, True, False)
 
-with open("experiments/performance_max_pool_vs_parabolic.json", "w") as outfile:
+# Train LeNet with Parabolic Dilation with Scale Space
+train_and_store(False, True, True)
+
+with open("experiments/performance_max_pool_vs_mp_vs_parabolic_vs_parabolic_scale_space.json", "w") as outfile:
     json.dump(data, outfile)

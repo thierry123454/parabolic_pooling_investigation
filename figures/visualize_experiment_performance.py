@@ -2,14 +2,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 
-with open('experiments/performance_max_pool_vs_parabolic.json') as f:
+with open('experiments/performance_max_pool_vs_mp_vs_parabolic_vs_parabolic_scale_space.json') as f:
     data = json.load(f)
 
 # Setup LaTeX
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 
-models = ["Standard LeNet", "LeNet with Parabolic SE"]
+models = ["MaxPool", "MorphPool Parabolic SE", "Standard Parabolic SE", "Standard Parabolic SE with SSI"]
 
 fig, axs = plt.subplots(1, 2, figsize=(17, 9))
 
@@ -25,6 +25,7 @@ avg_time = []
 std_time = []
 
 for key in data.keys():
+    print(key)
     accuracies = np.array(data[key]["accuracy"])
     avg_accuracies.append(np.mean(accuracies))
     std_accuracies.append(np.std(accuracies))
@@ -41,9 +42,9 @@ for key in data.keys():
     avg_time.append(np.mean(time))
     std_time.append(np.std(time))
 
-x = np.arange(2)
-
 print(avg_accuracies)
+
+x = np.arange(4)
 
 bar_width = 0.2
 
@@ -60,7 +61,7 @@ axs[0].set_xticklabels(models)
 axs[0].set_ylabel('Values')
 
 axs[0].legend()
-axs[0].set_ylim([0.944, 0.962])
+axs[0].set_ylim([0.94, 0.965])
 axs[0].grid(True)
 
 axs[1].bar(x, avg_time, yerr=std_time, capsize=4, width=bar_width, label='Avg. Accuracy')
