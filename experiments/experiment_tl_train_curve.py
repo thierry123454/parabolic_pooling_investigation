@@ -180,18 +180,18 @@ with torch.no_grad():
 	model.eval()
 
 	preds = []
+	targets = []
 
 	for (x, y) in testDataLoader:
 		x = x.to(device)
 		pred = model(x)
 		preds.extend(pred.argmax(axis=1).cpu().numpy())
-		print(pred.argmax(axis=1).cpu().numpy())
-		print(y)
-	
-	class_report = classification_report(testData.targets,
-										np.array(preds),
-										target_names=testData.classes,
-										output_dict=True)
+		targets.extend(y.numpy())
+
+	class_report = classification_report(np.array(targets),
+										 np.array(preds),
+										 target_names=testData.classes,
+										 output_dict=True)
 	
 	print(class_report)
 
