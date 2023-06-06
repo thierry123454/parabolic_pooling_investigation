@@ -13,12 +13,13 @@ import numpy as np
 
 torch.manual_seed(0)
 
-from models.parabolic_lenet import LeNet
+from models.parabolic_lenet_ss import LeNet_SS
 
 # define training hyperparameters
 INIT_LR = 1e-3
 BATCH_SIZE = 32
-EPOCHS = 10
+EPOCHS = 5
+RUNS = 4
 
 # set the device we will be using to train the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -43,21 +44,14 @@ trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
 
 IMG_SIZE = 28
 
-def train(scale, in_features, use_pool_std):
-	conv_size = 5 * scale
-	conv_size = conv_size if conv_size % 2 != 0 else conv_size + 1
-	scaled_ks = conv_size + 2
-
-	print(f"Window Size: {scaled_ks}")
-
+def train(scale, in_features):
 	# initialize the LeNet model
-	model = LeNet(
+	model = LeNet_SS(
 		numChannels=1,
 		classes=len(trainData.dataset.classes),
-		ks=scaled_ks,
+		ks=13,
 		fc_in_features=in_features,
-		pool_std=use_pool_std,
-		scale=scale).to(device)
+		).to(device)
 
 	# initialize our optimizer and loss function
 	opt = Adam(model.parameters(), lr=INIT_LR)
@@ -70,12 +64,14 @@ def train(scale, in_features, use_pool_std):
 				x = F.interpolate(x, size=(IMG_SIZE * scale, IMG_SIZE * scale), mode='bilinear', align_corners=False)
 
 			(x, y) = (x.to(device), y.to(device))
+			# print(x.shape)
+			# print(in_features)
 			pred = model(x)
 			loss = lossFn(pred, y)
 			opt.zero_grad()
 			loss.backward()
 			opt.step()
-
+	
 	with torch.no_grad():
 		model.eval()
 
@@ -84,7 +80,6 @@ def train(scale, in_features, use_pool_std):
 		for (x, y) in testDataLoader:
 			x = x.to(device)
 			if (scale >= 2):
-
 				x = F.interpolate(x, size=(IMG_SIZE * scale, IMG_SIZE * scale), mode='bilinear', align_corners=False)
 
 			pred = model(x)
@@ -94,45 +89,44 @@ def train(scale, in_features, use_pool_std):
 												np.array(preds),
 												target_names=testData.classes,
 												output_dict=True)
-	
-	conv_weights = model.conv1.weight.data.cpu().tolist()
 
-	return (model.pool1.t.tolist(), model.pool2.t.tolist(), class_report["accuracy"], conv_weights)
+	return (model.pool1.t.item(), model.pool2.t.item(), class_report["accuracy"])
 
-def collect_data(std_pool):
+def collect_data():
 	data = {}
 
-	print(f"Standard pool: {std_pool}")
 	for img_scale in range(1, 5):
 		print(f"Scale {img_scale}:")
+
+		scales_p1 = []
+		scales_p2 = []
+		acc = []
 
 		for (x, _) in trainDataLoader:
 			x = F.interpolate(x, size=(IMG_SIZE * img_scale, IMG_SIZE * img_scale), mode='bilinear', align_corners=False)
 			x = x.to(device)
-			in_features = LeNet(numChannels=1, classes=len(trainData.dataset.classes), scale=img_scale).to(device)._calculate_num_features(x)
+			in_features = LeNet_SS(numChannels=1, classes=len(trainData.dataset.classes)).to(device)._calculate_num_features(x)
 			break
 		
 		print(f"Num features for FCC: {in_features}")
 
-		(t1, t2, accuracy, conv_weights) = train(img_scale, in_features, std_pool)
-	
-		scales_p1 = t1
-		scales_p2 = t2
-		acc = accuracy
+		for r in range(RUNS):
+			print(f"Run {r}:")
+			(t1, t2, accuracy) = train(img_scale, in_features)
+		
+			scales_p1.append(t1)
+			scales_p2.append(t2)
+			acc.append(accuracy)
 		
 		data[img_scale] = {}
 		data[img_scale]["scales_p1"] = scales_p1
 		data[img_scale]["scales_p2"] = scales_p2
-		data[img_scale]["conv_weights"] = conv_weights
 		data[img_scale]["accuracies"] = acc
 
 		print(data[img_scale])
 
-	with open("experiments/scale_experiment_conv_kernels_standard.json" if std_pool else "experiments/scale_experiment_kernels_normalized.json", "w") as outfile:
+	with open("experiments/scale_experiment_ss.json", "w") as outfile:
 		json.dump(data, outfile)
 
 # Using standard SE
-collect_data(True)
-
-# # Using normalized SE
-# collect_data(False)
+collect_data()

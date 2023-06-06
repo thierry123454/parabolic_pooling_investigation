@@ -18,6 +18,7 @@ from models.parabolic_lenet import LeNet
 INIT_LR = 1e-3
 BATCH_SIZE = 32
 EPOCHS = 10
+RUNS = 5
 
 # set the device we will be using to train the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -57,19 +58,20 @@ total_poi = 0
 
 
 # Meerdere runs en gemiddelde.
+for _ in range(RUNS):
+	for _ in range(EPOCHS):
+		model.train()
 
-for _ in range(EPOCHS):
-	model.train()
+		for (x, y) in trainDataLoader:
+			(x, y) = (x.to(device), y.to(device))
+			pred, poi_counter = model(x)
+			loss = lossFn(pred, y)
+			opt.zero_grad()
+			loss.backward()
+			opt.step()
+			total_poi += poi_counter
 
-	for (x, y) in trainDataLoader:
-		(x, y) = (x.to(device), y.to(device))
-		pred, poi_counter = model(x)
-		loss = lossFn(pred, y)
-		opt.zero_grad()
-		loss.backward()
-		opt.step()
-		total_poi += poi_counter
-
-	print(f"Loss: {loss}")
+		print(f"Total Points of Interest: {total_poi}")
+		print(f"Loss: {loss}")
 
 print(total_poi)

@@ -13,6 +13,9 @@ from torch.optim import lr_scheduler
 
 from torchvision import models
 
+from models.standard_lenet import LeNet_Standard
+from models.parabolic_lenet import LeNet
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -26,8 +29,8 @@ from morphology_package.src.morphological_torch.pooling_operations import Parabo
 # define training hyperparameters
 INIT_LR = 0.01 # 1e-3 
 BATCH_SIZE = 32
-EPOCHS = 1 # 15
-RUNS = 1 # 5
+EPOCHS = 5 # 15
+RUNS = 3 # 5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def load_dataset(dataset):
@@ -53,17 +56,13 @@ def load_dataset(dataset):
 
 	return trainData, testData
 
-def train_and_eval_model(model, trainData, testData):
-	# initialize the train, validation, and test data loaders
-	trainDataLoader = DataLoader(trainData, shuffle=True, batch_size=BATCH_SIZE)
-	testDataLoader = DataLoader(testData, shuffle=False, batch_size=BATCH_SIZE)
-
+def train_and_eval_model(model, trainDataLoader, testDataLoader):
 	# calculate steps per epoch for training and validation set
 	trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
 
 	# initialize our optimizer and loss function
 	opt = Adam(model.parameters(), lr=INIT_LR)
-	lossFn = nn.CrossEntropyLoss()
+	lossFn = nn.NLLLoss()
 	exp_lr_scheduler = lr_scheduler.StepLR(opt, step_size=3, gamma=0.1)
 
 	accuracies = []
@@ -109,8 +108,6 @@ def train_and_eval_model(model, trainData, testData):
 				pred = model(x)
 				preds.extend(pred.argmax(axis=1).cpu().numpy())
 				targets.extend(y.numpy())
-				print(pred.argmax(axis=1).cpu().numpy())
-				print(y.numpy())
 
 		class_report = classification_report(np.array(targets),
 											 np.array(preds),
@@ -125,18 +122,40 @@ def train_and_eval_model(model, trainData, testData):
 	return accuracies, avg_f1, avg_precision, avg_recall, times
 
 
-def load_vgg16(num_classes):
-	model = models.vgg16('DEFAULT').to(DEVICE)
+def load_standard_model(trainDataLoader, num_classes):
+	for (x, _) in trainDataLoader:
+			x = x.to(DEVICE)
+			in_features = LeNet_Standard(numChannels=3, classes=num_classes).to(DEVICE)._calculate_num_features(x)
+			break
+	
+	model = LeNet_Standard(
+		numChannels=3,
+		classes=num_classes,
+		fc_in_features=in_features).to(DEVICE)
+	
+	return model
 
-	# Deze op true?
-	for param in model.parameters():
-		param.requires_grad = False # False
+def load_parabolic_model(trainDataLoader, num_classes, pool_method_std, ssi):
+	window_size = 7 if ssi else 5
 
-	num_features = model.classifier[6].in_features
-	features = list(model.classifier.children())[:-1] # Remove last layer
-	features.extend([nn.Linear(num_features, num_classes)]) # Add our layer with 4 outputs
-	model.classifier = nn.Sequential(*features).to(DEVICE) # Replace the model classifier
-
+	for (x, _) in trainDataLoader:
+			x = x.to(DEVICE)
+			in_features = LeNet(
+				numChannels=3,
+				classes=num_classes,
+				ks=window_size,
+				pool_std=pool_method_std,
+				pool_init='scale_space' if ssi else 'uniform').to(DEVICE)._calculate_num_features(x)
+			break
+	
+	model = LeNet(
+				numChannels=3,
+				classes=num_classes,
+				ks=window_size,
+				pool_std=pool_method_std,
+				fc_in_features=in_features,
+				pool_init='scale_space' if ssi else 'uniform').to(DEVICE)
+	
 	return model
 
 def run_experiment(dataset):
@@ -146,17 +165,22 @@ def run_experiment(dataset):
 	print("Running experiment for " + dataset)
 	trainData, testData = load_dataset(dataset)
 
+	# initialize the train, validation, and test data loaders
+	trainDataLoader = DataLoader(trainData, shuffle=True, batch_size=BATCH_SIZE)
+	testDataLoader = DataLoader(testData, shuffle=False, batch_size=BATCH_SIZE)
+
 	if dataset == "SVHN":
 		num_classes = 10
 	else:
-		num_classes = len(trainData.classes)
+		num_classes = len(trainDataLoader.dataset.classes)
 
 	# Default Model without Parabolic Dilation
-	model = load_vgg16(num_classes)
-	print("Standard Model")
-	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainData, testData)
+	model = load_standard_model(trainDataLoader, num_classes)
 
-	data["vgg16_standard"] = {
+	print("Standard Model")
+	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainDataLoader, testDataLoader)
+
+	data["standard"] = {
 		"accuracy": accuracies,
 		"avg_f1": avg_f1,
 		"avg_precision": avg_precision,
@@ -165,20 +189,12 @@ def run_experiment(dataset):
 	}
 
 	# Default Model with MP Parabolic Dilation
-	model = load_vgg16(num_classes)
-	channels = -1
-	for i, feature in enumerate(model.features):
-		if isinstance(feature, nn.Conv2d):
-			channels = feature.out_channels
-		# print(channels)
-		if isinstance(feature, nn.MaxPool2d):
-			model.features[i] = ParabolicPool2D_TL(channels, kernel_size=5, stride=2)
-			# print(feature)
-	
+	model = load_parabolic_model(trainDataLoader, num_classes, False, False)
+
 	print("Model with MP Parabolic Dilation")
-	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainData, testData)
+	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainDataLoader, testDataLoader)
 
-	data["vgg16_mp_dilation"] = {
+	data["mp_dilation"] = {
 		"accuracy": accuracies,
 		"avg_f1": avg_f1,
 		"avg_precision": avg_precision,
@@ -186,39 +202,27 @@ def run_experiment(dataset):
 		"time": times
 	}
 
-	# print("Model with Standard Parabolic Dilation")
-	# # Default Model with Standard Parabolic Dilation
-	# model = load_vgg16(num_classes)
-	# channels = -1
-	# for i, feature in enumerate(model.features):
-	# 	if isinstance(feature, nn.Conv2d):
-	# 		channels = feature.out_channels
-	# 	if isinstance(feature, nn.MaxPool2d):
-	# 		model.features[i] = ParabolicPool2D_V2_TL(channels, kernel_size=5, stride=2, init='uniform')
+	# Default Model with Standard Parabolic Dilation
+	model = load_parabolic_model(trainDataLoader, num_classes, True, False)
 	
-	# accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainData, testData)
+	print("Model with Standard Parabolic Dilation")
+	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainDataLoader, testDataLoader)
 
-	# data["vgg16_std_dilation"] = {
-	# 	"accuracy": accuracies,
-	# 	"avg_f1": avg_f1,
-	# 	"avg_precision": avg_precision,
-	# 	"avg_recall": avg_recall,
-	# 	"time": times
-	# }
+	data["std_dilation"] = {
+		"accuracy": accuracies,
+		"avg_f1": avg_f1,
+		"avg_precision": avg_precision,
+		"avg_recall": avg_recall,
+		"time": times
+	}
 
-	print("Model with Standard Parabolic Dilation with SSI")
 	# Default Model with Standard Parabolic Dilation with SSI
-	model = load_vgg16(num_classes)
-	channels = -1
-	for i, feature in enumerate(model.features):
-		if isinstance(feature, nn.Conv2d):
-			channels = feature.out_channels
-		if isinstance(feature, nn.MaxPool2d):
-			model.features[i] = ParabolicPool2D_V2_TL(channels, kernel_size=7, stride=2, init='scale_space')
+	model = load_parabolic_model(trainDataLoader, num_classes, True, True)
 	
-	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainData, testData)
+	print("Model with Standard Parabolic Dilation with SSI")
+	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainDataLoader, testDataLoader)
 
-	data["vgg16_std_dilation_ssi"] = {
+	data["std_dilation_ssi"] = {
 		"accuracy": accuracies,
 		"avg_f1": avg_f1,
 		"avg_precision": avg_precision,
@@ -226,8 +230,8 @@ def run_experiment(dataset):
 		"time": times
 	}
 	
-	with open("experiments/performance_transfer_learning_" + dataset + ".json", "w") as outfile:
+	with open("experiments/performance_" + dataset + ".json", "w") as outfile:
 		json.dump(data, outfile)
 
-run_experiment("SVHN")
 run_experiment("CIFAR100")
+run_experiment("SVHN")
