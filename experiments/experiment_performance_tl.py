@@ -6,7 +6,7 @@ from torch.utils.data import random_split
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import CIFAR100, Caltech101, SVHN
-from torch.optim import Adam
+from torch.optim import SGD
 from torch import nn
 
 from torch.optim import lr_scheduler
@@ -62,7 +62,7 @@ def train_and_eval_model(model, trainData, testData):
 	trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
 
 	# initialize our optimizer and loss function
-	opt = Adam(model.parameters(), lr=INIT_LR)
+	opt = SGD(model.parameters(), lr=INIT_LR)
 	lossFn = nn.CrossEntropyLoss()
 	exp_lr_scheduler = lr_scheduler.StepLR(opt, step_size=3, gamma=0.1)
 
@@ -130,7 +130,7 @@ def load_vgg16(num_classes):
 
 	# Deze op true?
 	for param in model.parameters():
-		param.requires_grad = False # False
+		param.requires_grad = True # False
 
 	num_features = model.classifier[6].in_features
 	features = list(model.classifier.children())[:-1] # Remove last layer
@@ -186,25 +186,25 @@ def run_experiment(dataset):
 		"time": times
 	}
 
-	# print("Model with Standard Parabolic Dilation")
-	# # Default Model with Standard Parabolic Dilation
-	# model = load_vgg16(num_classes)
-	# channels = -1
-	# for i, feature in enumerate(model.features):
-	# 	if isinstance(feature, nn.Conv2d):
-	# 		channels = feature.out_channels
-	# 	if isinstance(feature, nn.MaxPool2d):
-	# 		model.features[i] = ParabolicPool2D_V2_TL(channels, kernel_size=5, stride=2, init='uniform')
+	print("Model with Standard Parabolic Dilation")
+	# Default Model with Standard Parabolic Dilation
+	model = load_vgg16(num_classes)
+	channels = -1
+	for i, feature in enumerate(model.features):
+		if isinstance(feature, nn.Conv2d):
+			channels = feature.out_channels
+		if isinstance(feature, nn.MaxPool2d):
+			model.features[i] = ParabolicPool2D_V2_TL(channels, kernel_size=5, stride=2, init='uniform')
 	
-	# accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainData, testData)
+	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainData, testData)
 
-	# data["vgg16_std_dilation"] = {
-	# 	"accuracy": accuracies,
-	# 	"avg_f1": avg_f1,
-	# 	"avg_precision": avg_precision,
-	# 	"avg_recall": avg_recall,
-	# 	"time": times
-	# }
+	data["vgg16_std_dilation"] = {
+		"accuracy": accuracies,
+		"avg_f1": avg_f1,
+		"avg_precision": avg_precision,
+		"avg_recall": avg_recall,
+		"time": times
+	}
 
 	print("Model with Standard Parabolic Dilation with SSI")
 	# Default Model with Standard Parabolic Dilation with SSI
@@ -229,5 +229,5 @@ def run_experiment(dataset):
 	with open("experiments/performance_transfer_learning_" + dataset + ".json", "w") as outfile:
 		json.dump(data, outfile)
 
-run_experiment("SVHN")
 run_experiment("CIFAR100")
+run_experiment("SVHN")

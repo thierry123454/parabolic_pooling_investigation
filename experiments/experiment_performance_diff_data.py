@@ -5,16 +5,13 @@ from sklearn.metrics import classification_report
 from torch.utils.data import random_split
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from torchvision.datasets import CIFAR100, Caltech101, SVHN
-from torch.optim import Adam
+from torchvision.datasets import CIFAR10, SVHN
+from torch.optim import Adam, SGD
 from torch import nn
 
 from torch.optim import lr_scheduler
 
 from torchvision import models
-
-from models.standard_lenet import LeNet_Standard
-from models.parabolic_lenet import LeNet
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,43 +24,159 @@ torch.manual_seed(0)
 from morphology_package.src.morphological_torch.pooling_operations import ParabolicPool2D_V2_TL, ParabolicPool2D_TL
 
 # define training hyperparameters
-INIT_LR = 0.01 # 1e-3 
+INIT_LR = 0.01
 BATCH_SIZE = 32
-EPOCHS = 5 # 15
-RUNS = 3 # 5
+EPOCHS = 10
+RUNS = 5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+# CIFAR-10 Model
+class CIFAR_10_CNN(nn.Module):
+   # Credit: https://shonit2096.medium.com/cnn-on-cifar10-data-set-using-pytorch-34be87e09844
+
+    def __init__(self):
+        
+        super(CIFAR_10_CNN, self).__init__()
+
+        self.conv_layer = nn.Sequential(
+
+            # Conv Layer block 1
+            nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
+            # Conv Layer block 2
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Dropout2d(p=0.05),
+
+            # Conv Layer block 3
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+        )
+
+
+        self.fc_layer = nn.Sequential(
+            nn.Dropout(p=0.1),
+            nn.Linear(4096, 1024),
+            nn.ReLU(inplace=True),
+            nn.Linear(1024, 512),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=0.1),
+            nn.Linear(512, 10)
+        )
+
+
+    def forward(self, x):
+        """Perform forward."""
+        
+        # conv layers
+        x = self.conv_layer(x)
+        
+        # flatten
+        x = x.view(x.size(0), -1)
+        
+        # fc layer
+        x = self.fc_layer(x)
+
+        return x
+    
+# SVHN Model
+class SVHN_CNN(nn.Module):
+   # Credit: https://www.kaggle.com/code/dimitriosroussis/svhn-classification-with-cnn-keras-96-acc
+
+	def __init__(self):
+		super(SVHN_CNN, self).__init__()
+		self.conv_layer = nn.Sequential(
+			nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1),
+			nn.ReLU(inplace=True),
+			nn.BatchNorm2d(32),
+			nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=1),
+			nn.ReLU(inplace=True),
+			nn.MaxPool2d(kernel_size=2, stride=2),
+			nn.Dropout(0.3),
+		
+			nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+			nn.ReLU(inplace=True),
+			nn.BatchNorm2d(64),
+			nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
+			nn.ReLU(inplace=True),
+			nn.MaxPool2d(kernel_size=2, stride=2),
+			nn.Dropout(0.3),
+		
+			nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
+			nn.ReLU(inplace=True),
+			nn.BatchNorm2d(128),
+			nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
+			nn.ReLU(inplace=True),
+			nn.MaxPool2d(kernel_size=2, stride=2),
+			nn.Dropout(0.3),
+		)
+
+		self.fc_layer = nn.Sequential(
+            nn.Linear(2048, 128),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=0.4),
+            nn.Linear(128, 10),
+        )
+
+
+	def forward(self, x):
+		"""Perform forward."""
+
+		# conv layers
+		x = self.conv_layer(x)
+
+		# flatten
+		x = x.view(x.size(0), -1)
+
+		# fc layer
+		x = self.fc_layer(x)
+
+		return x
 
 def load_dataset(dataset):
 	transformation = transforms.Compose([
-				transforms.Resize(224),
-				transforms.ToTensor(),
-				transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-			])
+		transforms.ToTensor(),
+		transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
 
-	if dataset == "CIFAR100":
-		trainData = CIFAR100(root="data/cifar100", download=True, train=True,
+	if dataset == "CIFAR10":
+		trainData = CIFAR10(root="data/CIFAR10", download=True, train=True,
 			transform=transformation)
-		testData = CIFAR100(root="data/cifar100", download=True, train=False,
+		testData = CIFAR10(root="data/CIFAR10", download=True, train=False,
 			transform=transformation)
-	elif dataset == "CalTech101":
-		print("WIP")
-		pass
-		trainData = Caltech101(root="data/Caltech101", download=True, transform=transformation)
-		testData = Caltech101(root="data/Caltech101", download=True, transform=transformation)
 	elif dataset == "SVHN":
 		trainData = SVHN(root="data/SVHN", download=True, split='train', transform=transformation)
 		testData = SVHN(root="data/SVHN", download=True, split='test', transform=transformation)
 
 	return trainData, testData
 
-def train_and_eval_model(model, trainDataLoader, testDataLoader):
+def train_and_eval_model(model, trainData, testData):
+	# initialize the train, validation, and test data loaders
+	trainDataLoader = DataLoader(trainData, shuffle=True, batch_size=BATCH_SIZE)
+	testDataLoader = DataLoader(testData, shuffle=False, batch_size=BATCH_SIZE)
+
 	# calculate steps per epoch for training and validation set
 	trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
 
 	# initialize our optimizer and loss function
-	opt = Adam(model.parameters(), lr=INIT_LR)
-	lossFn = nn.NLLLoss()
-	exp_lr_scheduler = lr_scheduler.StepLR(opt, step_size=3, gamma=0.1)
+	# opt = Adam(model.parameters(), lr=INIT_LR)
+	opt = SGD(model.parameters(), lr=INIT_LR)
+	lossFn = nn.CrossEntropyLoss()
+	exp_lr_scheduler = lr_scheduler.StepLR(opt, step_size=4, gamma=0.1)
 
 	accuracies = []
 	avg_f1 = []
@@ -72,11 +185,11 @@ def train_and_eval_model(model, trainDataLoader, testDataLoader):
 	times = []
 
 	for r in range(RUNS):
-		print(f"Run: {r} / {RUNS}")
+		print(f"Run: {r + 1} / {RUNS}")
 		
 		startTime = time.time()
 		for e in range(EPOCHS):
-			print(f"Epoch: {e} / {EPOCHS}")
+			print(f"Epoch: {e + 1} / {EPOCHS}")
 
 			model.train()
 
@@ -122,41 +235,8 @@ def train_and_eval_model(model, trainDataLoader, testDataLoader):
 	return accuracies, avg_f1, avg_precision, avg_recall, times
 
 
-def load_standard_model(trainDataLoader, num_classes):
-	for (x, _) in trainDataLoader:
-			x = x.to(DEVICE)
-			in_features = LeNet_Standard(numChannels=3, classes=num_classes).to(DEVICE)._calculate_num_features(x)
-			break
-	
-	model = LeNet_Standard(
-		numChannels=3,
-		classes=num_classes,
-		fc_in_features=in_features).to(DEVICE)
-	
-	return model
-
-def load_parabolic_model(trainDataLoader, num_classes, pool_method_std, ssi):
-	window_size = 7 if ssi else 5
-
-	for (x, _) in trainDataLoader:
-			x = x.to(DEVICE)
-			in_features = LeNet(
-				numChannels=3,
-				classes=num_classes,
-				ks=window_size,
-				pool_std=pool_method_std,
-				pool_init='scale_space' if ssi else 'uniform').to(DEVICE)._calculate_num_features(x)
-			break
-	
-	model = LeNet(
-				numChannels=3,
-				classes=num_classes,
-				ks=window_size,
-				pool_std=pool_method_std,
-				fc_in_features=in_features,
-				pool_init='scale_space' if ssi else 'uniform').to(DEVICE)
-	
-	return model
+def load_model(dataset):
+	return CIFAR_10_CNN().to(DEVICE) if dataset == "CIFAR10" else SVHN_CNN().to(DEVICE)
 
 def run_experiment(dataset):
 	# Store data in dict
@@ -165,22 +245,12 @@ def run_experiment(dataset):
 	print("Running experiment for " + dataset)
 	trainData, testData = load_dataset(dataset)
 
-	# initialize the train, validation, and test data loaders
-	trainDataLoader = DataLoader(trainData, shuffle=True, batch_size=BATCH_SIZE)
-	testDataLoader = DataLoader(testData, shuffle=False, batch_size=BATCH_SIZE)
-
-	if dataset == "SVHN":
-		num_classes = 10
-	else:
-		num_classes = len(trainDataLoader.dataset.classes)
-
 	# Default Model without Parabolic Dilation
-	model = load_standard_model(trainDataLoader, num_classes)
-
 	print("Standard Model")
-	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainDataLoader, testDataLoader)
+	model = load_model(dataset)
+	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainData, testData)
 
-	data["standard"] = {
+	data[dataset + "_standard"] = {
 		"accuracy": accuracies,
 		"avg_f1": avg_f1,
 		"avg_precision": avg_precision,
@@ -189,12 +259,20 @@ def run_experiment(dataset):
 	}
 
 	# Default Model with MP Parabolic Dilation
-	model = load_parabolic_model(trainDataLoader, num_classes, False, False)
-
 	print("Model with MP Parabolic Dilation")
-	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainDataLoader, testDataLoader)
+	model = load_model(dataset)
+	channels = -1
+	for i, feature in enumerate(model.conv_layer):
+		if isinstance(feature, nn.Conv2d):
+			channels = feature.out_channels
+		# print(channels)
+		if isinstance(feature, nn.MaxPool2d):
+			model.conv_layer[i] = ParabolicPool2D_TL(channels, kernel_size=5, stride=2)
+			# print(feature)
 
-	data["mp_dilation"] = {
+	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainData, testData)
+
+	data[dataset + "_mp_dilation"] = {
 		"accuracy": accuracies,
 		"avg_f1": avg_f1,
 		"avg_precision": avg_precision,
@@ -203,12 +281,20 @@ def run_experiment(dataset):
 	}
 
 	# Default Model with Standard Parabolic Dilation
-	model = load_parabolic_model(trainDataLoader, num_classes, True, False)
-	
 	print("Model with Standard Parabolic Dilation")
-	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainDataLoader, testDataLoader)
+	model = load_model(dataset)
+	channels = -1
+	for i, feature in enumerate(model.conv_layer):
+		if isinstance(feature, nn.Conv2d):
+			channels = feature.out_channels
+		# print(channels)
+		if isinstance(feature, nn.MaxPool2d):
+			model.conv_layer[i] = ParabolicPool2D_V2_TL(channels, kernel_size=5, stride=2, init='uniform')
+			# print(feature)
+	
+	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainData, testData)
 
-	data["std_dilation"] = {
+	data[dataset + "_std_dilation"] = {
 		"accuracy": accuracies,
 		"avg_f1": avg_f1,
 		"avg_precision": avg_precision,
@@ -217,12 +303,19 @@ def run_experiment(dataset):
 	}
 
 	# Default Model with Standard Parabolic Dilation with SSI
-	model = load_parabolic_model(trainDataLoader, num_classes, True, True)
-	
 	print("Model with Standard Parabolic Dilation with SSI")
-	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainDataLoader, testDataLoader)
+	model = load_model(dataset)
+	channels = -1
+	for i, feature in enumerate(model.conv_layer):
+		if isinstance(feature, nn.Conv2d):
+			channels = feature.out_channels
+		# print(channels)
+		if isinstance(feature, nn.MaxPool2d):
+			model.conv_layer[i] = ParabolicPool2D_V2_TL(channels, kernel_size=7, stride=2, init='scale_space')
 
-	data["std_dilation_ssi"] = {
+	accuracies, avg_f1, avg_precision, avg_recall, times = train_and_eval_model(model, trainData, testData)
+
+	data[dataset + "_std_dilation_ssi"] = {
 		"accuracy": accuracies,
 		"avg_f1": avg_f1,
 		"avg_precision": avg_precision,
@@ -233,5 +326,5 @@ def run_experiment(dataset):
 	with open("experiments/performance_" + dataset + ".json", "w") as outfile:
 		json.dump(data, outfile)
 
-run_experiment("CIFAR100")
+run_experiment("CIFAR10")
 run_experiment("SVHN")

@@ -17,7 +17,7 @@ from sklearn.metrics import classification_report
 from torch.utils.data import random_split
 from torch.utils.data import DataLoader
 from torchvision.transforms import ToTensor
-from torch.optim import Adam
+from torch.optim import Adam, SGD
 from torch import nn
 from torch.nn import functional as F
 
@@ -79,7 +79,7 @@ testSteps = len(testDataLoader.dataset) // BATCH_SIZE
 model = MorphAudioModel(1, len(word_list)).to(device)
 
 # initialize our optimizer and loss function
-opt = Adam(model.parameters(), lr=INIT_LR)
+opt = SGD(model.parameters(), lr=INIT_LR)
 lossFn = nn.NLLLoss()
 
 step = 1
