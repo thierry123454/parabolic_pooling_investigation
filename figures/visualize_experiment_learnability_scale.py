@@ -39,7 +39,7 @@ def plot_scales(axis, scale_key, data_dict, legend=False):
             else:
                 axis.fill_between(x, min_scales, max_scales, alpha=0.3)
                 # axis.fill_between(x, low_quartile, up_quartile, alpha=0.3)
-            axis.plot(x, mean_scales, marker='o', label=f"Mean $s_0 = {key}$")  
+            axis.plot(x, mean_scales, marker='o', label=f"Mean $s$, $s_0 = {key}$")  
         else:
             axis.fill_between(x, min_scales, max_scales, alpha=0.3)
             # axis.fill_between(x, low_quartile, up_quartile, alpha=0.3)
@@ -99,7 +99,7 @@ def plot_scales(axis, scale_key, data_dict, legend=False):
             else:
                 axis.fill_between(x, min_scales, max_scales, alpha=0.3)
                 # axis.fill_between(x, low_quartile, up_quartile, alpha=0.3)
-            axis.plot(x, mean_scales, marker='o', label=f"Mean $s_0 = {key}$")  
+            axis.plot(x, mean_scales, marker='o', label=f"Mean $s$, $s_0 = {key}$")  
         else:
             axis.fill_between(x, min_scales, max_scales, alpha=0.3)
             # axis.fill_between(x, low_quartile, up_quartile, alpha=0.3)
