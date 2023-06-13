@@ -12,7 +12,7 @@ torch.manual_seed(0)
 class LeNet(Module):
 	# Pooling Method paramet!
 	# Determine FC input featuress
-	def __init__(self, numChannels, classes, ks=3, fc_in_features=800, pool_std=True, scale=1, check_poi=False, pool_init='uniform'):
+	def __init__(self, numChannels, classes, ks=3, fc_in_features=800, pool_std=True, scale=1, check_poi=False, pool_init='uniform', ss=0.5):
 		# call the parent constructor
 		super(LeNet, self).__init__()
 
@@ -27,13 +27,13 @@ class LeNet(Module):
 		self.conv1 = Conv2d(in_channels=numChannels, out_channels=20,
 			kernel_size=(conv_size, conv_size))
 		self.relu1 = ReLU()
-		self.pool1 = ParabolicPool2D_V2(20, ks, init=pool_init) if pool_std else ParabolicPool2D(20, ks)
+		self.pool1 = ParabolicPool2D_V2(20, ks, init=pool_init, ss=ss) if pool_std else ParabolicPool2D(20, ks, init='manual' if pool_init == 'manual' else 'zero', ss=ss)
 
 		# initialize second set of CONV => RELU => POOL layers
 		self.conv2 = Conv2d(in_channels=20, out_channels=50,
 			kernel_size=(conv_size, conv_size))
 		self.relu2 = ReLU()
-		self.pool2 = ParabolicPool2D_V2(50, ks, init=pool_init) if pool_std else ParabolicPool2D(50, ks)
+		self.pool2 = ParabolicPool2D_V2(50, ks, init=pool_init, ss=ss) if pool_std else ParabolicPool2D(50, ks, init='manual' if pool_init == 'manual' else 'zero', ss=ss)
 
 		# initialize first (and only) set of FC => RELU layers
 		self.fc1 = Linear(in_features=fc_in_features, out_features=500)
