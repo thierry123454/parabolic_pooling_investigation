@@ -50,13 +50,13 @@ plot_scales(axs[1], "scales_p2", data)
 
 # Add labels to shared axes
 fig.text(0.5, 0.02, 'Window Size', ha='center', fontdict={'fontsize': 15})
-fig.text(-0.01, 0.49, "$\sigma$", va='center', rotation='vertical', fontdict={'fontsize': 20})
+fig.text(-0.01, 0.49, "$s$", va='center', rotation='vertical', fontdict={'fontsize': 20})
 
 # Adjust spacing between subplots
 # plt.subplots_adjust(wspace=0.1, hspace=0.2)
 
 fig.legend()
-fig.suptitle("Scales learned for different window sizes with $\sigma_s = 3$.", fontsize=30)
+fig.suptitle("Scales learned for different window sizes with all starting scales being 3 using the standard SE.", fontsize=20)
 fig.tight_layout()
 plt.subplots_adjust(top=0.9, bottom=0.07)
 plt.savefig("figures/kernel_size_experiment_scales_higher_starting_scale.pdf", format="pdf", bbox_inches="tight")
@@ -89,10 +89,10 @@ for metric in metrics:
     plt.errorbar(ks, metric_list, metric_std, marker="o", linestyle='--', capsize=5, label=label, alpha=0.7)
 
 plt.legend()
-plt.title("Accuracy and precision versus the kernel size of the parabolic structuring element.", fontdict={'fontsize': 15})
+plt.title("Accuracy and precision versus the window size with all starting scales being 3 using the standard SE.", fontdict={'fontsize': 15})
 
 # Add x-label
-plt.xlabel("Kernel Size")
+plt.xlabel("Window Size")
 
 # Add grid
 plt.grid(True)
@@ -114,10 +114,10 @@ for key in data.keys():
 
 plt.errorbar(ks, time_list, time_std, marker="o", linestyle="--", capsize=5)
 
-plt.title("Time taken to train in seconds versus the kernel size of the standard parabolic structuring element.", fontdict={"fontsize": 15})
+plt.title("Time taken to train in seconds versus the window size with all starting scales being 3 using the standard SE.", fontdict={"fontsize": 15})
 
 # Add x-label and y-label
-plt.xlabel("Kernel Size")
+plt.xlabel("Window Size")
 plt.ylabel("Time (s)")
 
 # Add grid

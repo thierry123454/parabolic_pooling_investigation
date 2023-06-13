@@ -19,7 +19,7 @@ plt.plot(epochs_list, H["train_loss"], 'o--', label='Train Loss')
 plt.plot(epochs_list, H["val_loss"], 'o--', label='Validation Loss')
 
 plt.legend()
-plt.title(f'Training curve for parabolic LeNet.', fontdict={'fontsize': 15})
+plt.title(f'Learning curve for LeNet using parabolic pooling layers on KMNIST.', fontdict={'fontsize': 15})
 
 # Add x-label and y-label
 plt.xlabel('Epoch')
@@ -28,6 +28,6 @@ plt.ylabel('Loss')
 # Add grid
 plt.grid(True)
 
-plt.savefig(f"training_curve.pdf", format="pdf", bbox_inches="tight")
+plt.savefig(f"figures/training_curve.pdf", format="pdf", bbox_inches="tight")
 
 plt.show()

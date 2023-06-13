@@ -59,7 +59,8 @@ plot_scales(axs[1, 1], "scales_p2", data)
 
 # Add labels to shared axes
 fig.text(0.5, 0.02, 'Window Size', ha='center', fontdict={'fontsize': 15})
-fig.text(0, 0.49, "$\sigma$", va='center', rotation='vertical', fontdict={'fontsize': 20})
+fig.text(0.01, 0.26, "$s\'$", va='center', rotation='vertical', fontdict={'fontsize': 20})
+fig.text(0.01, 0.69, "$s$", va='center', rotation='vertical', fontdict={'fontsize': 20})
 
 # Adjust spacing between subplots
 # plt.subplots_adjust(wspace=0.1, hspace=0.2)
@@ -67,9 +68,11 @@ fig.text(0, 0.49, "$\sigma$", va='center', rotation='vertical', fontdict={'fonts
 fig.legend()
 fig.suptitle("Scales learned for different window sizes.", fontsize=30)
 fig.tight_layout()
-plt.subplots_adjust(top=0.9, bottom=0.07)
+plt.subplots_adjust(top=0.9, bottom=0.07, left=0.058)
 plt.savefig("figures/kernel_size_experiment_scales.pdf", format="pdf", bbox_inches="tight")
 plt.show()
+
+exit()
 
 plt.figure(figsize=(13, 7))
 ks = [int(key) for key in data.keys()]

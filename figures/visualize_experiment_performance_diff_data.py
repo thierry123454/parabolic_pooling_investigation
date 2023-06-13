@@ -46,7 +46,8 @@ for key in data_cifar10.keys():
     avg_time.append(np.mean(time))
     std_time.append(np.std(time))
 
-print(avg_accuracies)
+print(avg_time)
+print(std_time)
 
 x = np.arange(4)
 
@@ -123,7 +124,8 @@ for key in data_svhn.keys():
     avg_time.append(np.mean(time))
     std_time.append(np.std(time))
 
-print(avg_accuracies)
+print(avg_time)
+print(std_time)
 
 x = np.arange(4)
 

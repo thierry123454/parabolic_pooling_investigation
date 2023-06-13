@@ -42,7 +42,9 @@ for key in data.keys():
     avg_time.append(np.mean(time))
     std_time.append(np.std(time))
 
-print(avg_accuracies)
+# print(avg_accuracies)
+
+print(avg_time)
 
 x = np.arange(4)
 
@@ -74,7 +76,9 @@ axs[1].set_xticks(x)
 axs[1].set_xticklabels(models)
 axs[1].grid(True)
 
-fig.suptitle("Performance of LeNet with and without using a parabolic SE on the KMNIST dataset.", fontsize=30)
+axs[0].set_title('Average accuracy, recall, F1, and precision of the models.')
+axs[1].set_title('Time taken to train five epochs of the models.')
+fig.suptitle("Performance of LeNet using different pooling methods on the KMNIST dataset.", fontsize=25)
 fig.tight_layout()
 
 plt.savefig("figures/performance_max_pool_versus_parabolic.pdf", format="pdf", bbox_inches="tight")
