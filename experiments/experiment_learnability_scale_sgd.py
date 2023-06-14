@@ -4,7 +4,7 @@ from torch.utils.data import random_split
 from torch.utils.data import DataLoader
 from torchvision.transforms import ToTensor
 from torchvision.datasets import KMNIST
-from torch.optim import Adam
+from torch.optim import SGD
 from torch import nn
 import torch
 import torch.nn.functional as F
@@ -16,7 +16,7 @@ torch.manual_seed(0)
 from models.parabolic_lenet import LeNet
 
 # define training hyperparameters
-INIT_LR = 1e-3
+INIT_LR = 1e-2
 BATCH_SIZE = 32
 EPOCHS = 15
 
@@ -62,7 +62,7 @@ def collect_data(std_pool):
 			ss=ss).to(device)
 
 		# initialize our optimizer and loss function
-		opt = Adam(model.parameters(), lr=INIT_LR)
+		opt = SGD(model.parameters(), lr=INIT_LR)
 		lossFn = nn.NLLLoss()
 		
 		data[ss] = {}
@@ -102,7 +102,7 @@ def collect_data(std_pool):
 
 		print(data[ss])
 
-	with open("experiments/scale_learnability_experiment_standard.json" if std_pool else "experiments/scale_learnability_experiment_normalized.json", "w") as outfile:
+	with open("experiments/scale_learnability_experiment_standard_sgd.json" if std_pool else "experiments/scale_learnability_experiment_normalized_sgd.json", "w") as outfile:
 		json.dump(data, outfile)
 
 # Using standard SE

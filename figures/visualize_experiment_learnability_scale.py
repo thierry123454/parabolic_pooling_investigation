@@ -61,8 +61,8 @@ fig.text(-0.01, 0.49, "$s$", va='center', rotation='vertical', fontdict={'fontsi
 # Adjust spacing between subplots
 # plt.subplots_adjust(wspace=0.1, hspace=0.2)
 
-fig.legend()
-fig.suptitle("Scales learned on different epochs with varying starting scales using the standard SE.", fontsize=25)
+fig.legend(fontsize="12", loc ="upper left")
+fig.suptitle("Scales learned on different epochs with varying starting scales using the standard SE.", fontsize=22)
 fig.tight_layout()
 plt.subplots_adjust(top=0.9, bottom=0.07)
 plt.savefig("figures/learnability_experiment_standard.pdf", format="pdf", bbox_inches="tight")
@@ -121,8 +121,8 @@ fig.text(-0.01, 0.49, "$s$", va='center', rotation='vertical', fontdict={'fontsi
 # Adjust spacing between subplots
 # plt.subplots_adjust(wspace=0.1, hspace=0.2)
 
-fig.legend()
-fig.suptitle("Scales learned on different epochs with varying starting scales using the MorphPool SE.", fontsize=25)
+fig.legend(fontsize="12", loc ="upper left")
+fig.suptitle("Scales learned on different epochs with varying starting scales using the MorphPool SE.", fontsize=22)
 fig.tight_layout()
 plt.subplots_adjust(top=0.9, bottom=0.07)
 plt.savefig("figures/learnability_experiment_normalized.pdf", format="pdf", bbox_inches="tight")
