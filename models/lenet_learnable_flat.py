@@ -13,19 +13,19 @@ torch.manual_seed(0)
 class LeNet_LearnableFlat(Module):
 	# Pooling Method paramet!
 	# Determine FC input featuress
-	def __init__(self, numChannels, classes, ks=5, fc_in_features=800):
+	def __init__(self, numChannels, classes, ks=5, fc_in_features=800, ss=2.0):
 		# call the parent constructor
 		super(LeNet_LearnableFlat, self).__init__()
 		# initialize first set of CONV => RELU => POOL layers
 		self.conv1 = Conv2d(in_channels=numChannels, out_channels=20,
 			kernel_size=(5, 5))
 		self.relu1 = ReLU()
-		self.pool1 = LearnableFlatPool(20, ks, 2, init="manual", ss=3.0)
+		self.pool1 = LearnableFlatPool(20, ks, 2, init='manual', ss=ss)
 		# initialize second set of CONV => RELU => POOL layers
 		self.conv2 = Conv2d(in_channels=20, out_channels=50,
 			kernel_size=(5, 5))
 		self.relu2 = ReLU()
-		self.pool2 = LearnableFlatPool(50, ks, 2, init="manual", ss=3.0)
+		self.pool2 = LearnableFlatPool(50, ks, 2, init='manual', ss=ss)
 		# initialize first (and only) set of FC => RELU layers
 		self.fc1 = Linear(in_features=fc_in_features, out_features=500)
 		self.relu3 = ReLU()

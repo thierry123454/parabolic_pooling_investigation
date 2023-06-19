@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 
-with open('experiments/kernel_size_experiment_normalized.json') as f:
-    data = json.load(f)
+with open('experiments/kernel_size_experiment_flat.json') as f:
+    data_flat = json.load(f)
 
 with open('experiments/kernel_size_experiment_standard.json') as f2:
     data_standard = json.load(f2)
@@ -22,7 +22,7 @@ def plot_scales(axis, scale_key, data_dict, legend=False):
     low_quartile = []
     up_quartile = []
 
-    for key in data.keys():
+    for key in data_flat.keys():
         scales = np.array(data_dict[key][scale_key]).flatten()
         min_scales.append(np.min(scales))
         max_scales.append(np.max(scales))
@@ -45,21 +45,21 @@ def plot_scales(axis, scale_key, data_dict, legend=False):
     axis.grid()
 
 # Plot on each subplot
-axs[0, 0].set_title('Standard SE / Pool 1')
+axs[0, 0].set_title('Parabolic SE / Pool 1')
 plot_scales(axs[0, 0], "scales_p1", data_standard, True)
 
-axs[0, 1].set_title('Standard SE / Pool 2')
+axs[0, 1].set_title('Parabolic SE / Pool 2')
 plot_scales(axs[0, 1], "scales_p2", data_standard)
 
-axs[1, 0].set_title('MP SE / Pool 1')
-plot_scales(axs[1, 0], "scales_p1", data)
+axs[1, 0].set_title('Flat SE / Pool 1')
+plot_scales(axs[1, 0], "scales_p1", data_flat)
 
-axs[1, 1].set_title('MP SE / Pool 2')
-plot_scales(axs[1, 1], "scales_p2", data)
+axs[1, 1].set_title('Flat SE / Pool 2')
+plot_scales(axs[1, 1], "scales_p2", data_flat)
 
 # Add labels to shared axes
 fig.text(0.5, 0.02, 'Window Size', ha='center', fontdict={'fontsize': 15})
-fig.text(0.01, 0.26, "$s\'$", va='center', rotation='vertical', fontdict={'fontsize': 20})
+fig.text(0.01, 0.26, "$s$", va='center', rotation='vertical', fontdict={'fontsize': 20})
 fig.text(0.01, 0.69, "$s$", va='center', rotation='vertical', fontdict={'fontsize': 20})
 
 # Adjust spacing between subplots
@@ -69,11 +69,11 @@ fig.legend()
 fig.suptitle("Scales learned for different window sizes.", fontsize=30)
 fig.tight_layout()
 plt.subplots_adjust(top=0.9, bottom=0.07, left=0.058)
-plt.savefig("figures/kernel_size_experiment_scales.pdf", format="pdf", bbox_inches="tight")
+plt.savefig("figures/kernel_size_experiment_scales_flat.pdf", format="pdf", bbox_inches="tight")
 plt.show()
 
 plt.figure(figsize=(13, 7))
-ks = [int(key) for key in data.keys()]
+ks = [int(key) for key in data_flat.keys()]
 
 # Possibly add "avg_f1" and "avg_recall"
 metrics = ["accuracy", "avg_precision"]
@@ -85,19 +85,19 @@ for i, metric in enumerate(metrics):
     metric_list = []
     metric_std = []
 
-    for key in data.keys():
-        metric_list.append(np.mean(data[key][metric]))
-        metric_std.append(np.std(data[key][metric]))
+    for key in data_flat.keys():
+        metric_list.append(np.mean(data_flat[key][metric]))
+        metric_std.append(np.std(data_flat[key][metric]))
 
     label = ""
     if metric == "accuracy":
-        label = "Avg. Accuracy MP"
+        label = "Avg. Accuracy Flat"
     elif metric == "avg_f1":
-        label = "Avg. F1 MP"
+        label = "Avg. F1 Flat"
     elif metric == "avg_precision":
-        label = "Avg. Precision MP"
+        label = "Avg. Precision Flat"
     elif metric == "avg_recall":
-        label = "Avg. Recall MP"
+        label = "Avg. Recall Flat"
 
     plt.errorbar(ks, metric_list, metric_std, marker=markers[i], linestyle=linestyles[i], capsize=5, label=label, alpha=0.7)
 
@@ -111,18 +111,18 @@ for i, metric in enumerate(metrics):
 
     label = ""
     if metric == "accuracy":
-        label = "Avg. Accuracy Standard"
+        label = "Avg. Accuracy Parabolic"
     elif metric == "avg_f1":
-        label = "Avg. F1 Standard"
+        label = "Avg. F1 Parabolic"
     elif metric == "avg_precision":
-        label = "Avg. Precision Standard"
+        label = "Avg. Precision Parabolic"
     elif metric == "avg_recall":
-        label = "Avg. Recall Standard"
+        label = "Avg. Recall Parabolic"
 
     plt.errorbar(ks, metric_list, metric_std, marker=markers[i + 2], linestyle=linestyles[i + 2], capsize=5, label=label, alpha=0.7)
 
 plt.legend()
-plt.title("Accuracy and precision versus the kernel size of the parabolic structuring element.", fontdict={'fontsize': 15})
+plt.title("Accuracy and precision versus the kernel size of the structuring element.", fontdict={'fontsize': 15})
 
 # Add x-label
 plt.xlabel("Kernel Size")
@@ -130,22 +130,22 @@ plt.xlabel("Kernel Size")
 # Add grid
 plt.grid(True)
 
-plt.savefig("figures/kernel_size_experiment_accuracy_and_precision.pdf", format="pdf", bbox_inches="tight")
+plt.savefig("figures/kernel_size_experiment_accuracy_and_precision_flat.pdf", format="pdf", bbox_inches="tight")
 
 plt.show()
 
 plt.figure(figsize=(13, 7))
 
-ks = [int(key) for key in data.keys()]
+ks = [int(key) for key in data_flat.keys()]
 
 time_list = []
 time_std = []
 
-for key in data.keys():
-    time_list.append(np.mean(data[key]["time"]))
-    time_std.append(np.std(data[key]["time"]))
+for key in data_flat.keys():
+    time_list.append(np.mean(data_flat[key]["time"]))
+    time_std.append(np.std(data_flat[key]["time"]))
 
-plt.errorbar(ks, time_list, time_std, marker="o", linestyle="--", capsize=5, label="MP")
+plt.errorbar(ks, time_list, time_std, marker="o", linestyle="--", capsize=5, label="Flat")
 
 time_list = []
 time_std = []
@@ -154,10 +154,10 @@ for key in data_standard.keys():
     time_list.append(np.mean(data_standard[key]["time"]))
     time_std.append(np.std(data_standard[key]["time"]))
 
-plt.errorbar(ks, time_list, time_std, marker="o", linestyle="--", capsize=5, label="Standard")
+plt.errorbar(ks, time_list, time_std, marker="o", linestyle="--", capsize=5, label="Parabolic")
 
 plt.legend()
-plt.title("Time taken to train in seconds versus the kernel size of the parabolic structuring element.", fontdict={"fontsize": 15})
+plt.title("Time taken to train in seconds versus the kernel size of the structuring element.", fontdict={"fontsize": 15})
 
 # Add x-label and y-label
 plt.xlabel("Kernel Size")
@@ -166,6 +166,6 @@ plt.ylabel("Time (s)")
 # Add grid
 plt.grid(True)
 
-plt.savefig("figures/kernel_size_experiment_time.pdf", format="pdf", bbox_inches="tight")
+plt.savefig("figures/kernel_size_experiment_time_flat.pdf", format="pdf", bbox_inches="tight")
 
 plt.show()

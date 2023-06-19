@@ -16,7 +16,7 @@ plt.figure(figsize=(13, 7))
 plt.plot(epochs_list, H["train_loss"], 'o--', label='Train Loss')
 
 # Plot validation loss with dashes and dots
-plt.plot(epochs_list, H["val_loss"], 'o--', label='Validation Loss')
+plt.plot(epochs_list, H["val_loss"], '^-', label='Validation Loss')
 
 plt.legend()
 plt.title(f'Learning curve for LeNet using parabolic pooling layers on KMNIST.', fontdict={'fontsize': 15})
