@@ -49,11 +49,12 @@ print(avg_time)
 x = np.arange(4)
 
 bar_width = 0.2
+error_kw=dict(ecolor='black', lw=2, capsize=4)
 
-axs[0].bar(x - bar_width*1.5, avg_accuracies, yerr=std_accuracies, capsize=4, width=bar_width, label='Avg. Accuracy')
-axs[0].bar(x - bar_width/2, avg_recall, yerr=std_recall, capsize=4,  width=bar_width, label='Avg. Recall')
-axs[0].bar(x + bar_width/2, avg_precision, yerr=std_precision, capsize=4,  width=bar_width, label='Avg. Precision')
-axs[0].bar(x + bar_width*1.5, avg_f1, yerr=std_f1, capsize=4,  width=bar_width, label='Avg. F1')
+axs[0].bar(x - bar_width*1.5, avg_accuracies, yerr=std_accuracies, width=bar_width, label='Avg. Accuracy', hatch='/', error_kw=error_kw, alpha=.99)
+axs[0].bar(x - bar_width/2, avg_recall, yerr=std_recall, width=bar_width, label='Avg. Recall', hatch='o', error_kw=error_kw, alpha=.99)
+axs[0].bar(x + bar_width/2, avg_precision, yerr=std_precision, width=bar_width, label='Avg. Precision', hatch='.', error_kw=error_kw, alpha=.99)
+axs[0].bar(x + bar_width*1.5, avg_f1, yerr=std_f1, width=bar_width, label='Avg. F1', hatch='x', error_kw=error_kw, alpha=.99)
 
 # Set the x-axis tick positions and labels
 axs[0].set_xticks(x)
@@ -66,7 +67,7 @@ axs[0].legend()
 axs[0].set_ylim([0.94, 0.965])
 axs[0].grid(True)
 
-axs[1].bar(x, avg_time, yerr=std_time, capsize=4, width=bar_width, label='Avg. Accuracy')
+axs[1].bar(x, avg_time, yerr=std_time, capsize=4, width=bar_width)
 
 # Set labels and title
 axs[1].set_ylabel('Time (s)')

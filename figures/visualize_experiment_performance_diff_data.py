@@ -53,10 +53,12 @@ x = np.arange(4)
 
 bar_width = 0.2
 
-plt.bar(x - bar_width*1.5, avg_accuracies, yerr=std_accuracies, capsize=4, width=bar_width, label='Avg. Accuracy')
-plt.bar(x - bar_width/2, avg_recall, yerr=std_recall, capsize=4,  width=bar_width, label='Avg. Recall')
-plt.bar(x + bar_width/2, avg_precision, yerr=std_precision, capsize=4,  width=bar_width, label='Avg. Precision')
-plt.bar(x + bar_width*1.5, avg_f1, yerr=std_f1, capsize=4,  width=bar_width, label='Avg. F1')
+error_kw=dict(ecolor='black', lw=2, capsize=4)
+
+plt.bar(x - bar_width*1.5, avg_accuracies, yerr=std_accuracies, width=bar_width, label='Avg. Accuracy', hatch='/', error_kw=error_kw, alpha=.99)
+plt.bar(x - bar_width/2, avg_recall, yerr=std_recall, width=bar_width, label='Avg. Recall', hatch='o', error_kw=error_kw, alpha=.99)
+plt.bar(x + bar_width/2, avg_precision, yerr=std_precision, width=bar_width, label='Avg. Precision', hatch='.', error_kw=error_kw, alpha=.99)
+plt.bar(x + bar_width*1.5, avg_f1, yerr=std_f1, width=bar_width, label='Avg. F1', hatch='x', error_kw=error_kw, alpha=.99)
 
 # Set the x-axis tick positions and labels
 ax = plt.gca()
@@ -131,10 +133,12 @@ x = np.arange(4)
 
 bar_width = 0.2
 
-plt.bar(x - bar_width*1.5, avg_accuracies, yerr=std_accuracies, capsize=4, width=bar_width, label='Avg. Accuracy')
-plt.bar(x - bar_width/2, avg_recall, yerr=std_recall, capsize=4,  width=bar_width, label='Avg. Recall')
-plt.bar(x + bar_width/2, avg_precision, yerr=std_precision, capsize=4,  width=bar_width, label='Avg. Precision')
-plt.bar(x + bar_width*1.5, avg_f1, yerr=std_f1, capsize=4,  width=bar_width, label='Avg. F1')
+error_kw=dict(ecolor='black', lw=2, capsize=4)
+
+plt.bar(x - bar_width*1.5, avg_accuracies, yerr=std_accuracies, width=bar_width, label='Avg. Accuracy', hatch='/', error_kw=error_kw, alpha=.99)
+plt.bar(x - bar_width/2, avg_recall, yerr=std_recall, width=bar_width, label='Avg. Recall', hatch='o', error_kw=error_kw, alpha=.99)
+plt.bar(x + bar_width/2, avg_precision, yerr=std_precision, width=bar_width, label='Avg. Precision', hatch='.', error_kw=error_kw, alpha=.99)
+plt.bar(x + bar_width*1.5, avg_f1, yerr=std_f1, width=bar_width, label='Avg. F1', hatch='x', error_kw=error_kw, alpha=.99)
 
 # Set the x-axis tick positions and labels
 ax = plt.gca()

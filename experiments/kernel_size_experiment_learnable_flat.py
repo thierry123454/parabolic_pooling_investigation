@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use("Agg")
 # import the necessary packages
 from sklearn.metrics import classification_report
 from torch.utils.data import random_split
@@ -6,19 +8,22 @@ from torchvision.transforms import ToTensor
 from torchvision.datasets import KMNIST
 from torch.optim import Adam
 from torch import nn
-import torch
-import torch.nn.functional as F
-import json
+
+import matplotlib.pyplot as plt
 import numpy as np
+import torch
+import time
+import json
 
 torch.manual_seed(0)
 
-from models.parabolic_lenet import LeNet
+from models.lenet_learnable_flat import LeNet_LearnableFlat
 
 # define training hyperparameters
 INIT_LR = 1e-3
 BATCH_SIZE = 32
-EPOCHS = 15
+EPOCHS = 5
+RUNS = 3
 
 # set the device we will be using to train the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -41,47 +46,68 @@ testDataLoader = DataLoader(testData, batch_size=BATCH_SIZE)
 # calculate steps per epoch for training and validation set
 trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
 
-IMG_SIZE = 28
+# Dictionary that contains all data
+data = {}
 
-start_scales = [0.5, 1.0, 2.0, 3.0, 5.0, 8.0, 10.0]
+first = True
 
-def collect_data(std_pool):
-	data = {}
+def train_and_store(kernel_size):
+	global first
 
-	print(f"Standard pool: {std_pool}")
-	for ss in start_scales:
-		print(f"Starting Scale {ss}:")
+	print(f"Starting experiment for kernel size: {kernel_size}")
+
+	accuracy = []
+	avg_f1 = []
+	avg_precision = []
+	avg_recall = []
+	times = []
+	scales_p1 = []
+	scales_p2 = []
+
+	# Train model for one epoch to get training data in cache. This leads to
+	# to the very first iteration not having a extraordinarily high time to
+	# train.
+	if first:
+		model = LeNet_LearnableFlat(
+			numChannels=1,
+			classes=len(trainData.dataset.classes)).to(device)
+		opt = Adam(model.parameters(), lr=INIT_LR)
+		lossFn = nn.NLLLoss()
+		model.train()
+		for (x, y) in trainDataLoader:
+			(x, y) = (x.to(device), y.to(device))
+			pred = model(x)
+			loss = lossFn(pred, y)
+			opt.zero_grad()
+			loss.backward()
+			opt.step()
+		first = False
+
+	for r in range(RUNS):
+		print(f"Run: {r}")
 
 		# initialize the LeNet model
-		model = LeNet(
+		model = LeNet_LearnableFlat(
 			numChannels=1,
 			classes=len(trainData.dataset.classes),
-			ks=13,
-			pool_std=std_pool,
-			pool_init='manual',
-			ss=ss).to(device)
+			ks=kernel_size).to(device)
 
 		# initialize our optimizer and loss function
 		opt = Adam(model.parameters(), lr=INIT_LR)
 		lossFn = nn.NLLLoss()
-		
-		data[ss] = {}
-		data[ss]["scales_p1"] = []
-		data[ss]["scales_p2"] = []
 
+		startTime = time.time()
 		for _ in range(EPOCHS):
 			model.train()
+
 			for (x, y) in trainDataLoader:
 				(x, y) = (x.to(device), y.to(device))
-				# print(x.shape)
-				# print(in_features)
 				pred = model(x)
 				loss = lossFn(pred, y)
 				opt.zero_grad()
 				loss.backward()
 				opt.step()
-			data[ss]["scales_p1"].append(model.pool1.t.tolist())
-			data[ss]["scales_p2"].append(model.pool2.t.tolist())
+		totalTime = time.time() - startTime
 
 		with torch.no_grad():
 			model.eval()
@@ -97,16 +123,34 @@ def collect_data(std_pool):
 											 np.array(preds),
 											 target_names=testData.classes,
 											 output_dict=True)
-		
-		data[ss]["accuracy"] = class_report["accuracy"]
 
-		print(data[ss])
+		accuracy.append(class_report["accuracy"])
+		avg_f1.append(class_report["macro avg"]["f1-score"])
+		avg_precision.append(class_report["macro avg"]["precision"])
+		avg_recall.append(class_report["macro avg"]["recall"])
+		times.append(totalTime)
+		scales_p1.append(model.pool1.t.tolist())
+		scales_p2.append(model.pool2.t.tolist())
+		print(scales_p1)
+	
+	data[kernel_size] = {
+		"accuracy": accuracy,
+		"avg_f1": avg_f1,
+		"avg_precision": avg_precision,
+		"avg_recall": avg_recall,
+		"time": times,
+		"scales_p1": scales_p1,
+		"scales_p2": scales_p2
+	}
 
-	with open("experiments/scale_learnability_experiment_standard.json" if std_pool else "experiments/scale_learnability_experiment_normalized.json", "w") as outfile:
-		json.dump(data, outfile)
+	print(data[kernel_size])
 
-# Using standard SE
-collect_data(True)
+kernel_sizes = [3, 5, 7, 9, 11, 13, 15]
 
-# Using normalized SE
-collect_data(False)
+for ks in kernel_sizes:
+	train_and_store(ks)
+
+print(data)
+
+with open("experiments/kernel_size_experiment_flat.json", "w") as outfile:
+    json.dump(data, outfile)
